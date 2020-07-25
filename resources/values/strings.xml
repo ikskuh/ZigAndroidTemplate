@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ziggy</string>
+    <string name="lib_name">ziggy</string>
+    <string name="package_name">net.random_projects.ziggy</string>
+</resources>

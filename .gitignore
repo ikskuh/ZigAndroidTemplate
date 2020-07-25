@@ -1,0 +1,4 @@
+zig-cache
+*.apk
+*.keystore
+apk/
