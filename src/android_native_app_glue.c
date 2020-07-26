@@ -210,10 +210,6 @@ void android_app_post_exec_cmd(struct android_app *android_app, int8_t cmd)
     }
 }
 
-void app_dummy()
-{
-}
-
 static void android_app_destroy(struct android_app *android_app)
 {
     LOGV("android_app_destroy!");
@@ -301,25 +297,6 @@ static struct android_app *android_app_create(ANativeActivity *activity,
 
     pthread_mutex_init(&android_app->mutex, NULL);
     pthread_cond_init(&android_app->cond, NULL);
-
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
-    //Capture input
-    setvbuf(stdout, 0, _IOLBF, 0); // make stdout line-buffered
-    setvbuf(stderr, 0, _IONBF, 0); // make stderr unbuffered
-    pipe(pfd);
-    dup2(pfd[1], 1);
-    dup2(pfd[1], 2);
-    pthread_create(&debug_capture_thread, &attr, debug_capture_thread_fn, android_app);
-
-    if (savedState != NULL)
-    {
-        android_app->savedState = malloc(savedStateSize);
-        android_app->savedStateSize = savedStateSize;
-        memcpy(android_app->savedState, savedState, savedStateSize);
-    }
 
     int msgpipe[2];
     if (pipe(msgpipe))

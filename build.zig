@@ -65,24 +65,25 @@ fn initAppCommon(b: *std.build.Builder, output_name: []const u8, target: std.zig
     exe.bundle_compiler_rt = true;
 
     exe.defineCMacro("ANDROID");
-    exe.defineCMacro("APPNAME=\"" ++ app_name ++ "\"");
-    if (android_fullscreen) {
-        exe.defineCMacro("DANDROID_FULLSCREEN");
-    }
-    exe.defineCMacro("DANDROIDVERSION=" ++ android_version_str);
+    // exe.defineCMacro("APPNAME=\"" ++ app_name ++ "\"");
+    // if (android_fullscreen) {
+    //     exe.defineCMacro("DANDROID_FULLSCREEN");
+    // }
+    // exe.defineCMacro("DANDROIDVERSION=" ++ android_version_str);
 
     exe.addIncludeDir("./src");
     exe.addIncludeDir(android_ndk_root ++ "/sysroot/usr/include");
     // exe.addIncludeDir(android_ndk_root ++ "/sysroot/usr/include/android");
 
-    for (app_sources) |src| {
-        exe.addCSourceFile(src, &common_cflags);
-    }
+    // for (app_sources) |src| {
+    //     exe.addCSourceFile(src, &common_cflags);
+    // }
 
     for (app_libs) |lib| {
         exe.linkSystemLibrary(lib);
     }
 
+    exe.addBuildOption(comptime_int, "android_sdk_version", android_version);
     exe.linkLibC();
     exe.setBuildMode(mode);
     exe.setTarget(target);
