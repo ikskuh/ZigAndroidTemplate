@@ -51,27 +51,19 @@ fn initAppCommon(b: *std.build.Builder, output_name: []const u8, target: std.zig
     exe.force_pic = true;
     exe.link_function_sections = true;
     exe.bundle_compiler_rt = true;
+    exe.strip = (mode == .ReleaseSmall);
 
     exe.defineCMacro("ANDROID");
-    // exe.defineCMacro("APPNAME=\"" ++ app_name ++ "\"");
-    // if (android_fullscreen) {
-    //     exe.defineCMacro("DANDROID_FULLSCREEN");
-    // }
-    // exe.defineCMacro("DANDROIDVERSION=" ++ android_version_str);
 
     exe.addIncludeDir("./src");
     exe.addIncludeDir(android_ndk_root ++ "/sysroot/usr/include");
-    // exe.addIncludeDir(android_ndk_root ++ "/sysroot/usr/include/android");
-
-    // for (app_sources) |src| {
-    //     exe.addCSourceFile(src, &common_cflags);
-    // }
 
     for (app_libs) |lib| {
         exe.linkSystemLibrary(lib);
     }
 
     exe.addBuildOption(comptime_int, "android_sdk_version", android_version);
+    exe.addBuildOption(bool, "fullscreen", android_fullscreen);
     exe.linkLibC();
     exe.setBuildMode(mode);
     exe.setTarget(target);
@@ -167,13 +159,11 @@ pub fn build(b: *std.build.Builder) !void {
 
         var writer = buf.writer();
 
-        // attribute to <application>
-        // android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
         @setEvalBranchQuota(1_000_000);
         try writer.print(
             \\<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android" package="{}">
             \\    <uses-permission android:name="android.permission.SET_RELEASE_APP"/>
-            \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name"   tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon"  android:requestLegacyExternalStorage="true">
+            \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name" {} tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon"  android:requestLegacyExternalStorage="true">
             \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
             \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
             \\            <intent-filter>
@@ -184,7 +174,10 @@ pub fn build(b: *std.build.Builder) !void {
             \\    </application>
             \\</manifest>
             \\
-        , .{package_name});
+        , .{
+            package_name,
+            if (android_fullscreen) "android:theme=\"@android:style/Theme.NoTitleBar.Fullscreen\"" else "",
+        });
 
         break :blk buf.toOwnedSlice();
     });
@@ -310,11 +303,6 @@ pub fn build(b: *std.build.Builder) !void {
     const keystore_step = b.step("keystore", "Creates a new dummy keystore for testing");
     keystore_step.dependOn(&make_keystore.step);
 }
-
-const app_sources = [_][]const u8{
-    "./src/minimal.c",
-    "./src/android_native_app_glue.c",
-};
 
 const app_libs = [_][]const u8{
     "GLESv3", "EGL", "android", "log",

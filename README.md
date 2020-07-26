@@ -24,6 +24,8 @@ You also need [adb](https://developer.android.com/studio/command-line/adb) and a
 
 To build the APK, you need to adjust the paths in `build.zig` and `libc/` to your local system installation so the build runner can find all required tools and libraries.
 
+Now you need to generate yourself a keystore to sign your apps. For debugging purposes, the build script contains a helper. Just invoke `zig build keystore` to generate yourself a debug keystore that can be used with later build invocations. 
+
 If all of the above is done, you should be able to build the app by running `zig build`.
 
 There are convenience options with `zig build push` (installs the app on a connected phone) and `zig build run` (which installs, then runs the app).
