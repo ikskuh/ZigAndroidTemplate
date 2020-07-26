@@ -1,0 +1,28 @@
+{
+  "files.associations": {
+    "ios": "c",
+    "condition_variable": "c",
+    "array": "c",
+    "hash_map": "c",
+    "bitset": "c",
+    "string_view": "c",
+    "initializer_list": "c",
+    "ranges": "c",
+    "utility": "c",
+    "valarray": "c",
+    "__hash_table": "c",
+    "__split_buffer": "c",
+    "__tree": "c",
+    "deque": "c",
+    "iterator": "c",
+    "list": "c",
+    "map": "c",
+    "queue": "c",
+    "random": "c",
+    "set": "c",
+    "stack": "c",
+    "string": "c",
+    "unordered_map": "c",
+    "vector": "c"
+  }
+}

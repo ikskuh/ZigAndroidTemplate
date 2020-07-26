@@ -6,10 +6,10 @@
 #include <unistd.h>
 
 #include <jni.h>
-#include <native_activity.h>
+#include <android/native_activity.h>
 
-#include <asset_manager.h>
-#include <asset_manager_jni.h>
+#include <android/asset_manager.h>
+#include <android/asset_manager_jni.h>
 #include <android/sensor.h>
 
 #include <EGL/egl.h>
@@ -337,29 +337,7 @@ void HandleMotion(int x, int y, int mask)
 	lastmotiony = y;
 }
 
-#define HMX 162
-#define HMY 162
-short screenx, screeny;
-
 extern struct android_app *gapp;
-
-void HandleDestroy()
-{
-	printf("Destroying\n");
-	exit(10);
-}
-
-volatile int suspended;
-
-void HandleSuspend()
-{
-	suspended = 1;
-}
-
-void HandleResume()
-{
-	suspended = 0;
-}
 
 void setScreenViewport()
 {
@@ -367,8 +345,6 @@ void setScreenViewport()
 	android_height = ANativeWindow_getHeight(native_window);
 	glViewport(0, 0, android_width, android_height);
 }
-
-int __system_property_get(const char *name, char *value);
 
 EGLDisplay egl_display;
 EGLSurface egl_surface;
@@ -496,6 +472,10 @@ int initialize_egl()
 	return 0;
 }
 
+void HandleDestroy();
+void HandleResume();
+void HandleSuspend();
+
 void handle_cmd(struct android_app *app, int32_t cmd)
 {
 	switch (cmd)
@@ -519,6 +499,19 @@ void handle_cmd(struct android_app *app, int32_t cmd)
 			HandleResume();
 		}
 		break;
+
+	case APP_CMD_START:
+		// Starting the App here
+		break;
+
+	case APP_CMD_RESUME:
+		HandleResume();
+		break;
+
+	case APP_CMD_PAUSE:
+		HandleSuspend();
+		break;
+
 	//case APP_CMD_TERM_WINDOW:
 	//This gets called initially when you click "back"
 	//This also gets called when you are brought into standby.
@@ -595,21 +588,13 @@ int32_t handle_input(struct android_app *app, AInputEvent *event)
 	return 0;
 }
 
-void android_main(struct android_app *app)
-{
-	{
-		char sdk_ver_str[92];
-		int len = __system_property_get("ro.build.version.sdk", sdk_ver_str);
-		if (len <= 0)
-			android_sdk_version = 0;
-		else
-			android_sdk_version = atoi(sdk_ver_str);
-	}
+bool IsSuspended();
 
+void zig_main(struct android_app *app)
+{
 	gapp = app;
 	app->onAppCmd = handle_cmd;
 	app->onInputEvent = handle_input;
-	printf("Starting with Android SDK Version: %d\n", android_sdk_version);
 
 	// Include this if the app wants fullscreen display (no navigation buttons)
 	// AndroidMakeFullscreen();
@@ -644,7 +629,7 @@ void android_main(struct android_app *app)
 			}
 		}
 
-		if (suspended)
+		if (IsSuspended())
 		{
 			usleep(50000);
 			continue;

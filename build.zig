@@ -54,7 +54,7 @@ const common_lflags = [_][]const u8{
 };
 
 fn initAppCommon(b: *std.build.Builder, output_name: []const u8, target: std.zig.CrossTarget, mode: std.builtin.Mode) *std.build.LibExeObjStep {
-    const exe = b.addSharedLibrary(output_name, null, .{
+    const exe = b.addSharedLibrary(output_name, "./src/main.zig", .{
         .major = 1,
         .minor = 0,
         .patch = 0,
@@ -62,6 +62,7 @@ fn initAppCommon(b: *std.build.Builder, output_name: []const u8, target: std.zig
 
     exe.force_pic = true;
     exe.link_function_sections = true;
+    exe.bundle_compiler_rt = true;
 
     exe.defineCMacro("ANDROID");
     exe.defineCMacro("APPNAME=\"" ++ app_name ++ "\"");
@@ -70,8 +71,9 @@ fn initAppCommon(b: *std.build.Builder, output_name: []const u8, target: std.zig
     }
     exe.defineCMacro("DANDROIDVERSION=" ++ android_version_str);
 
+    exe.addIncludeDir("./src");
     exe.addIncludeDir(android_ndk_root ++ "/sysroot/usr/include");
-    exe.addIncludeDir(android_ndk_root ++ "/sysroot/usr/include/android");
+    // exe.addIncludeDir(android_ndk_root ++ "/sysroot/usr/include/android");
 
     for (app_sources) |src| {
         exe.addCSourceFile(src, &common_cflags);
@@ -81,6 +83,7 @@ fn initAppCommon(b: *std.build.Builder, output_name: []const u8, target: std.zig
         exe.linkSystemLibrary(lib);
     }
 
+    exe.linkLibC();
     exe.setBuildMode(mode);
     exe.setTarget(target);
 
