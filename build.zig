@@ -12,22 +12,16 @@ const android_sdk_root = "/home/felix/projects/android-hass/android-sdk";
 const android_ndk_root = android_sdk_root ++ "/ndk/21.1.6352462";
 const android_build_tools = android_sdk_root ++ "/build-tools/28.0.3";
 
+const keytool = "keytool";
+const adb = "adb";
+const jarsigner = "/usr/lib/jvm/java-11-openjdk/bin/jarsigner";
+
 // These are tweakable, but are not required to be touched
 
 const apk_file = app_name ++ ".apk";
 
 const android_version = 29;
 const android_target = android_version;
-
-const android_version_str = blk: {
-    comptime var buf: [std.math.log10(android_version) + 3]u8 = undefined;
-    break :blk std.fmt.bufPrint(&buf, "{d}", .{android_version}) catch unreachable;
-};
-
-const android_target_str = blk: {
-    comptime var buf: [std.math.log10(android_target) + 3]u8 = undefined;
-    break :blk std.fmt.bufPrint(&buf, "{d}", .{android_target}) catch unreachable;
-};
 
 const aapt = android_build_tools ++ "/aapt";
 const zipalign = android_build_tools ++ "/zipalign";
@@ -37,20 +31,14 @@ const keystore_alias = "standkey";
 const keystore_storepass = "passwd123";
 const keystore_keypass = "passwd456";
 
-const common_cflags = [_][]const u8{
-    // generic
-    "-ffunction-sections",
-    "-fdata-sections",
-    "-Wall",
-    "-fno-sanitize=undefined",
-    "-fvisibility=hidden",
+const android_version_str = blk: {
+    comptime var buf: [std.math.log10(android_version) + 3]u8 = undefined;
+    break :blk std.fmt.bufPrint(&buf, "{d}", .{android_version}) catch unreachable;
 };
 
-const common_lflags = [_][]const u8{
-    "-Wl,--gc-sections",
-    "-s",
-    "-shared",
-    "-uANativeActivity_onCreate",
+const android_target_str = blk: {
+    comptime var buf: [std.math.log10(android_target) + 3]u8 = undefined;
+    break :blk std.fmt.bufPrint(&buf, "{d}", .{android_target}) catch unreachable;
 };
 
 fn initAppCommon(b: *std.build.Builder, output_name: []const u8, target: std.zig.CrossTarget, mode: std.builtin.Mode) *std.build.LibExeObjStep {
@@ -248,7 +236,7 @@ pub fn build(b: *std.build.Builder) !void {
     repack_apk.step.dependOn(&unpack_apk.step);
 
     const sign_apk = b.addSystemCommand(&[_][]const u8{
-        "/usr/lib/jvm/java-11-openjdk/bin/jarsigner",
+        jarsigner,
         "-sigalg",
         "SHA1withRSA",
         "-digestalg",
@@ -275,7 +263,7 @@ pub fn build(b: *std.build.Builder) !void {
     b.getInstallStep().dependOn(&align_apk.step);
 
     const push_apk = b.addSystemCommand(&[_][]const u8{
-        "adb",
+        adb,
         "install",
         apk_file,
     });
@@ -285,7 +273,7 @@ pub fn build(b: *std.build.Builder) !void {
     push_step.dependOn(&push_apk.step);
 
     const run_apk = b.addSystemCommand(&[_][]const u8{
-        "adb",
+        adb,
         "shell",
         "am",
         "start",
@@ -298,7 +286,7 @@ pub fn build(b: *std.build.Builder) !void {
     run_step.dependOn(&run_apk.step);
 
     const make_keystore = b.addSystemCommand(&[_][]const u8{
-        "keytool",
+        keytool,
         "-genkey",
         "-v",
         "-keystore",
