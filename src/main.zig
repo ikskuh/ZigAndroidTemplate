@@ -36,6 +36,7 @@ const AndroidApp = struct {
 
     egl_lock: std.Mutex = std.Mutex.init(),
     egl: ?EGLContext = null,
+    egl_init: bool = true,
 
     fn initRestore(allocator: *std.mem.Allocator, activity: *android.ANativeActivity, stored_state: []const u8) !Self {
         return Self{
@@ -82,6 +83,7 @@ const AndroidApp = struct {
             std.log.err(.app, "Failed to initialize EGL for window: {}\n", .{err});
             break :blk null;
         };
+        self.egl_init = true;
     }
 
     fn onNativeWindowDestroyed(self: *Self, window: *android.ANativeWindow) void {
@@ -103,6 +105,23 @@ const AndroidApp = struct {
                 defer held.release();
                 if (self.egl) |egl| {
                     try egl.makeCurrent();
+
+                    if (self.egl_init) {
+                        std.log.info(.app,
+                            \\GL Vendor:     {}
+                            \\GL Renderer:   {}
+                            \\GL Version:    {}
+                            \\GL Extensions: {}
+                            \\
+                        , .{
+                            std.mem.span(c.glGetString(c.GL_VENDOR)),
+                            std.mem.span(c.glGetString(c.GL_RENDERER)),
+                            std.mem.span(c.glGetString(c.GL_VERSION)),
+                            std.mem.span(c.glGetString(c.GL_EXTENSIONS)),
+                        });
+
+                        self.egl_init = false;
+                    }
 
                     c.glClearColor(0.0, 0.0, @intToFloat(f32, (loop % 256)) / 255.0, 1.0);
                     c.glClear(c.GL_COLOR_BUFFER_BIT);
@@ -212,24 +231,6 @@ const EGLContext = struct {
             return error.FailedToInitializeEGL;
         }
         errdefer _ = c.eglDestroySurface(egl_display, context);
-
-        // if (c.eglMakeCurrent(egl_display, egl_surface, egl_surface, context) == 0) {
-        //     std.log.err(.egl, "Error: eglMakeCurrent failed: 0x{X:0>4}\n", .{c.eglGetError()});
-        //     return error.FailedToInitializeEGL;
-        // }
-
-        // std.log.info(.egl,
-        //     \\GL Vendor:     {}
-        //     \\GL Renderer:   {}
-        //     \\GL Version:    {}
-        //     \\GL Extensions: {}
-        //     \\
-        // , .{
-        //     std.mem.span(c.glGetString(c.GL_VENDOR)),
-        //     std.mem.span(c.glGetString(c.GL_RENDERER)),
-        //     std.mem.span(c.glGetString(c.GL_VERSION)),
-        //     std.mem.span(c.glGetString(c.GL_EXTENSIONS)),
-        // });
 
         return Self{
             .display = egl_display,

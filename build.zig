@@ -225,9 +225,9 @@ pub fn build(b: *std.build.Builder) !void {
     });
 
     make_unsigned_apk.step.dependOn(&aarch64_exe.step);
-    // make_unsigned_apk.step.dependOn(&arm_exe.step);
+    make_unsigned_apk.step.dependOn(&arm_exe.step);
     // make_unsigned_apk.step.dependOn(&x86_exe.step);
-    // make_unsigned_apk.step.dependOn(&x86_64_exe.step);
+    make_unsigned_apk.step.dependOn(&x86_64_exe.step);
 
     const unpack_apk = b.addSystemCommand(&[_][]const u8{
         "unzip",
