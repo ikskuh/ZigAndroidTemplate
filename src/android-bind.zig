@@ -1501,11 +1501,8 @@ const enum_unnamed_18 = extern enum(c_int) {
     AMETA_SCROLL_LOCK_ON = 4194304,
     _,
 };
-pub const struct_AInputEvent = @Type(.Opaque);
-pub const AInputEvent = struct_AInputEvent;
-pub const AINPUT_EVENT_TYPE_KEY = @enumToInt(enum_unnamed_19.AINPUT_EVENT_TYPE_KEY);
-pub const AINPUT_EVENT_TYPE_MOTION = @enumToInt(enum_unnamed_19.AINPUT_EVENT_TYPE_MOTION);
-const enum_unnamed_19 = extern enum(c_int) {
+pub const AInputEvent = @Type(.Opaque);
+pub const AInputEventType = extern enum(c_int) {
     AINPUT_EVENT_TYPE_KEY = 1,
     AINPUT_EVENT_TYPE_MOTION = 2,
     _,
@@ -1513,7 +1510,7 @@ const enum_unnamed_19 = extern enum(c_int) {
 pub const AKEY_EVENT_ACTION_DOWN = @enumToInt(enum_unnamed_20.AKEY_EVENT_ACTION_DOWN);
 pub const AKEY_EVENT_ACTION_UP = @enumToInt(enum_unnamed_20.AKEY_EVENT_ACTION_UP);
 pub const AKEY_EVENT_ACTION_MULTIPLE = @enumToInt(enum_unnamed_20.AKEY_EVENT_ACTION_MULTIPLE);
-const enum_unnamed_20 = extern enum(c_int) {
+pub const AKeyEventActionType = extern enum(c_int) {
     AKEY_EVENT_ACTION_DOWN = 0,
     AKEY_EVENT_ACTION_UP = 1,
     AKEY_EVENT_ACTION_MULTIPLE = 2,
@@ -1559,7 +1556,7 @@ pub const AMOTION_EVENT_ACTION_HOVER_ENTER = @enumToInt(enum_unnamed_22.AMOTION_
 pub const AMOTION_EVENT_ACTION_HOVER_EXIT = @enumToInt(enum_unnamed_22.AMOTION_EVENT_ACTION_HOVER_EXIT);
 pub const AMOTION_EVENT_ACTION_BUTTON_PRESS = @enumToInt(enum_unnamed_22.AMOTION_EVENT_ACTION_BUTTON_PRESS);
 pub const AMOTION_EVENT_ACTION_BUTTON_RELEASE = @enumToInt(enum_unnamed_22.AMOTION_EVENT_ACTION_BUTTON_RELEASE);
-const enum_unnamed_22 = extern enum(c_int) {
+pub const AMotionEventActionType = extern enum(c_int) {
     AMOTION_EVENT_ACTION_MASK = 255,
     AMOTION_EVENT_ACTION_POINTER_INDEX_MASK = 65280,
     AMOTION_EVENT_ACTION_DOWN = 0,
@@ -1849,12 +1846,13 @@ pub extern fn AMotionEvent_getHistoricalToolMajor(motion_event: ?*const AInputEv
 pub extern fn AMotionEvent_getHistoricalToolMinor(motion_event: ?*const AInputEvent, pointer_index: usize, history_index: usize) f32;
 pub extern fn AMotionEvent_getHistoricalOrientation(motion_event: ?*const AInputEvent, pointer_index: usize, history_index: usize) f32;
 pub extern fn AMotionEvent_getHistoricalAxisValue(motion_event: ?*const AInputEvent, axis: i32, pointer_index: usize, history_index: usize) f32;
-pub const struct_AInputQueue = @Type(.Opaque);
-pub const AInputQueue = struct_AInputQueue;
+
+pub const AInputQueue = @Type(.Opaque);
+
 pub extern fn AInputQueue_attachLooper(queue: ?*AInputQueue, looper: ?*ALooper, ident: c_int, callback: ALooper_callbackFunc, data: ?*c_void) void;
 pub extern fn AInputQueue_detachLooper(queue: ?*AInputQueue) void;
 pub extern fn AInputQueue_hasEvents(queue: ?*AInputQueue) i32;
-pub extern fn AInputQueue_getEvent(queue: ?*AInputQueue, outEvent: [*c]?*AInputEvent) i32;
+pub extern fn AInputQueue_getEvent(queue: ?*AInputQueue, outEvent: *?*AInputEvent) i32;
 pub extern fn AInputQueue_preDispatchEvent(queue: ?*AInputQueue, event: ?*AInputEvent) i32;
 pub extern fn AInputQueue_finishEvent(queue: ?*AInputQueue, event: ?*AInputEvent, handled: c_int) void;
 const struct_unnamed_32 = extern struct {

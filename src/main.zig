@@ -38,6 +38,11 @@ const AndroidApp = struct {
     egl: ?EGLContext = null,
     egl_init: bool = true,
 
+    input_lock: std.Mutex = std.Mutex.init(),
+    input: ?*android.AInputQueue = null,
+
+    config: ?*android.AConfiguration = null,
+
     fn initRestore(allocator: *std.mem.Allocator, activity: *android.ANativeActivity, stored_state: []const u8) !Self {
         return Self{
             .allocator = allocator,
@@ -96,10 +101,208 @@ const AndroidApp = struct {
         self.egl = null;
     }
 
+    fn onInputQueueCreated(self: *Self, input: *android.AInputQueue) void {
+        var held = self.input_lock.acquire();
+        defer held.release();
+
+        self.input = input;
+    }
+
+    fn onInputQueueDestroyed(self: *Self, input: *android.AInputQueue) void {
+        var held = self.input_lock.acquire();
+        defer held.release();
+
+        self.input = null;
+    }
+
+    fn printConfig(config: *android.AConfiguration) void {
+        var lang: [2]u8 = undefined;
+        var country: [2]u8 = undefined;
+
+        android.AConfiguration_getLanguage(config, &lang);
+        android.AConfiguration_getCountry(config, &country);
+
+        std.log.debug(.app,
+            \\MCC:         {}
+            \\MNC:         {}
+            \\Language:    {}
+            \\Country:     {}
+            \\Orientation: {}
+            \\Touchscreen: {}
+            \\Density:     {}
+            \\Keyboard:    {}
+            \\Navigation:  {}
+            \\KeysHidden:  {}
+            \\NavHidden:   {}
+            \\SdkVersion:  {}
+            \\ScreenSize:  {}
+            \\ScreenLong:  {}
+            \\UiModeType:  {}
+            \\UiModeNight: {}
+            \\
+        , .{
+            android.AConfiguration_getMcc(config),
+            android.AConfiguration_getMnc(config),
+            &lang,
+            &country,
+            android.AConfiguration_getOrientation(config),
+            android.AConfiguration_getTouchscreen(config),
+            android.AConfiguration_getDensity(config),
+            android.AConfiguration_getKeyboard(config),
+            android.AConfiguration_getNavigation(config),
+            android.AConfiguration_getKeysHidden(config),
+            android.AConfiguration_getNavHidden(config),
+            android.AConfiguration_getSdkVersion(config),
+            android.AConfiguration_getScreenSize(config),
+            android.AConfiguration_getScreenLong(config),
+            android.AConfiguration_getUiModeType(config),
+            android.AConfiguration_getUiModeNight(config),
+        });
+    }
+
+    fn processKeyEvent(self: *Self, event: *android.AInputEvent) !bool {
+        const event_type = @intToEnum(android.AKeyEventActionType, android.AKeyEvent_getAction(event));
+        std.log.debug(.input,
+            \\Key Press Event: {}
+            \\Flags:       {}
+            \\KeyCode:     {}
+            \\ScanCode:    {}
+            \\MetaState:   {}
+            \\RepeatCount: {}
+            \\DownTime:    {}
+            \\EventTime:   {}
+            \\
+        , .{
+            event_type,
+            android.AKeyEvent_getFlags(event),
+            android.AKeyEvent_getKeyCode(event),
+            android.AKeyEvent_getScanCode(event),
+            android.AKeyEvent_getMetaState(event),
+            android.AKeyEvent_getRepeatCount(event),
+            android.AKeyEvent_getDownTime(event),
+            android.AKeyEvent_getEventTime(event),
+        });
+        return false;
+    }
+
+    fn processMotionEvent(self: *Self, event: *android.AInputEvent) !bool {
+        const event_type = @intToEnum(android.AMotionEventActionType, android.AMotionEvent_getAction(event));
+
+        std.log.debug(.input,
+            \\Motion Event {}
+            \\Flags:        {}
+            \\MetaState:    {}
+            \\ButtonState:  {}
+            \\EdgeFlags:    {}
+            \\DownTime:     {}
+            \\EventTime:    {}
+            \\XOffset:      {}
+            \\YOffset:      {}
+            \\XPrecision:   {}
+            \\YPrecision:   {}
+            \\PointerCount: {}
+            \\
+        , .{
+            event_type,
+            android.AMotionEvent_getFlags(event),
+            android.AMotionEvent_getMetaState(event),
+            android.AMotionEvent_getButtonState(event),
+            android.AMotionEvent_getEdgeFlags(event),
+            android.AMotionEvent_getDownTime(event),
+            android.AMotionEvent_getEventTime(event),
+            android.AMotionEvent_getXOffset(event),
+            android.AMotionEvent_getYOffset(event),
+            android.AMotionEvent_getXPrecision(event),
+            android.AMotionEvent_getYPrecision(event),
+            android.AMotionEvent_getPointerCount(event),
+        });
+
+        var i: usize = 0;
+        var cnt = android.AMotionEvent_getPointerCount(event);
+        while (i < cnt) : (i += 1) {
+            std.log.debug(.input,
+                \\Pointer {}:
+                \\  PointerId:   {}
+                \\  ToolType:    {}
+                \\  RawX:        {}
+                \\  RawY:        {}
+                \\  X:           {}
+                \\  Y:           {}
+                \\  Pressure:    {}
+                \\  Size:        {}
+                \\  TouchMajor:  {}
+                \\  TouchMinor:  {}
+                \\  ToolMajor:   {}
+                \\  ToolMinor:   {}
+                \\  Orientation: {}
+                \\
+            , .{
+                i,
+                android.AMotionEvent_getPointerId(event, i),
+                android.AMotionEvent_getToolType(event, i),
+                android.AMotionEvent_getRawX(event, i),
+                android.AMotionEvent_getRawY(event, i),
+                android.AMotionEvent_getX(event, i),
+                android.AMotionEvent_getY(event, i),
+                android.AMotionEvent_getPressure(event, i),
+                android.AMotionEvent_getSize(event, i),
+                android.AMotionEvent_getTouchMajor(event, i),
+                android.AMotionEvent_getTouchMinor(event, i),
+                android.AMotionEvent_getToolMajor(event, i),
+                android.AMotionEvent_getToolMinor(event, i),
+                android.AMotionEvent_getOrientation(event, i),
+            });
+        }
+
+        return false;
+    }
+
     fn mainLoop(self: *Self) !void {
         var loop: usize = 0;
         std.log.notice(.app, "mainLoop() started\n", .{});
+
+        self.config = blk: {
+            var cfg = android.AConfiguration_new() orelse return error.OutOfMemory;
+            android.AConfiguration_fromAssetManager(cfg, self.activity.assetManager);
+            break :blk cfg;
+        };
+
+        if (self.config) |cfg| {
+            printConfig(cfg);
+        }
+
         while (@atomicLoad(bool, &self.running, .SeqCst)) {
+
+            // Input process
+            {
+                var held = self.input_lock.acquire();
+                defer held.release();
+                if (self.input) |input| {
+                    var event: ?*android.AInputEvent = undefined;
+                    while (android.AInputQueue_getEvent(input, &event) >= 0) {
+                        std.debug.assert(event != null);
+                        if (android.AInputQueue_preDispatchEvent(input, event) != 0) {
+                            continue;
+                        }
+
+                        const event_type = @intToEnum(android.AInputEventType, android.AInputEvent_getType(event));
+                        const handled = switch (event_type) {
+                            .AINPUT_EVENT_TYPE_KEY => try self.processKeyEvent(event.?),
+                            .AINPUT_EVENT_TYPE_MOTION => try self.processMotionEvent(event.?),
+                            else => blk: {
+                                std.log.debug(.input, "Unhandled input event type ({})\n", .{event_type});
+                                break :blk false;
+                            },
+                        };
+
+                        // if (app.onInputEvent != NULL)
+                        //     handled = app.onInputEvent(app, event);
+                        android.AInputQueue_finishEvent(input, event, if (handled) @as(c_int, 1) else @as(c_int, 0));
+                    }
+                }
+            }
+
+            // Render process
             {
                 var held = self.egl_lock.acquire();
                 defer held.release();
