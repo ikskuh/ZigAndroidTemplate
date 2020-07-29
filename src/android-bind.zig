@@ -2110,7 +2110,7 @@ pub const ANativeActivity = extern struct {
     obbPath: [*:0]const u8,
 };
 pub const ANativeActivity_createFunc = fn ([*c]ANativeActivity, ?*c_void, usize) callconv(.C) void;
-pub const ANativeActivity_onCreate = @compileError("unable to resolve function type ZigClangTypeClass.Typedef"); // /home/felix/projects/android-hass/android-sdk/ndk/21.1.6352462/sysroot/usr/include/android/native_activity.h:255:35
+
 pub extern fn ANativeActivity_finish(activity: [*c]ANativeActivity) void;
 pub extern fn ANativeActivity_setWindowFormat(activity: [*c]ANativeActivity, format: i32) void;
 pub extern fn ANativeActivity_setWindowFlags(activity: [*c]ANativeActivity, addFlags: u32, removeFlags: u32) void;
