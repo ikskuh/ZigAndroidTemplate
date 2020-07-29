@@ -7,6 +7,11 @@ const package_name = "net.random_projects." ++ app_name;
 
 const android_fullscreen = false;
 
+const permissions = [_][]const u8{
+    "android.permission.SET_RELEASE_APP",
+    "android.permission.RECORD_AUDIO",
+};
+
 // Adjust these to your system:
 const android_sdk_root = "/home/felix/projects/android-hass/android-sdk";
 const android_ndk_root = android_sdk_root ++ "/ndk/21.1.6352462";
@@ -162,7 +167,15 @@ pub fn build(b: *std.build.Builder) !void {
         @setEvalBranchQuota(1_000_000);
         try writer.print(
             \\<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android" package="{}">
-            \\    <uses-permission android:name="android.permission.SET_RELEASE_APP"/>
+            \\
+        , .{package_name});
+        for (permissions) |perm| {
+            try writer.print(
+                \\    <uses-permission android:name="{}"/>
+                \\
+            , .{perm});
+        }
+        try writer.print(
             \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name" {} tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon"  android:requestLegacyExternalStorage="true">
             \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
             \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
@@ -175,7 +188,6 @@ pub fn build(b: *std.build.Builder) !void {
             \\</manifest>
             \\
         , .{
-            package_name,
             if (android_fullscreen) "android:theme=\"@android:style/Theme.NoTitleBar.Fullscreen\"" else "",
         });
 
@@ -206,9 +218,9 @@ pub fn build(b: *std.build.Builder) !void {
     });
 
     make_unsigned_apk.step.dependOn(&aarch64_exe.step);
-    make_unsigned_apk.step.dependOn(&arm_exe.step);
-    // make_unsigned_apk.step.dependOn(&x86_exe.step);
-    make_unsigned_apk.step.dependOn(&x86_64_exe.step);
+    // make_unsigned_apk.step.dependOn(&arm_exe.step);
+    // // make_unsigned_apk.step.dependOn(&x86_exe.step);
+    // make_unsigned_apk.step.dependOn(&x86_64_exe.step);
 
     const unpack_apk = b.addSystemCommand(&[_][]const u8{
         "unzip",
