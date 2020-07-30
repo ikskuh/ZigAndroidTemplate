@@ -474,7 +474,14 @@ pub const AndroidApp = struct {
                         self.egl_init = false;
                     }
 
-                    c.glClearColor(0.0, 0.0, 0.0, 1.0);
+                    const t = @intToFloat(f32, loop) / 100.0;
+
+                    c.glClearColor(
+                        0.5 + 0.5 * std.math.sin(t + 0.0),
+                        0.5 + 0.5 * std.math.sin(t + 1.0),
+                        0.5 + 0.5 * std.math.sin(t + 2.0),
+                        1.0,
+                    );
                     c.glClear(c.GL_COLOR_BUFFER_BIT);
 
                     c.glUseProgram(program);
