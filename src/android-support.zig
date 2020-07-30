@@ -156,7 +156,11 @@ fn ANativeActivityGlue(comptime App: type) type {
         }
 
         fn onDestroy(activity: *android.ANativeActivity) callconv(.C) void {
-            invoke(activity, "onDestroy", .{});
+            if (activity.instance) |instance| {
+                const app = @ptrCast(*App, @alignCast(@alignOf(App), instance));
+                app.deinit();
+                std.heap.c_allocator.destroy(app);
+            }
         }
         fn onStart(activity: *android.ANativeActivity) callconv(.C) void {
             invoke(activity, "onStart", .{});

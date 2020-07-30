@@ -10,8 +10,19 @@ const build_options = @import("build_options");
 pub const panic = android.panic;
 pub const log = android.log;
 
+/// Entry point for our application.
+/// This struct provides the interface to the android support package.
 pub const AndroidApp = struct {
     const Self = @This();
+
+    const TouchPoint = struct {
+        /// if null, then fade out
+        index: ?i32,
+        intensity: f32,
+        x: f32,
+        y: f32,
+        age: i64,
+    };
 
     allocator: *std.mem.Allocator,
     activity: *android.ANativeActivity,
@@ -28,6 +39,13 @@ pub const AndroidApp = struct {
 
     config: ?*android.AConfiguration = null,
 
+    touch_points: [16]?TouchPoint = [1]?TouchPoint{null} ** 16,
+    screen_width: f32 = undefined,
+    screen_height: f32 = undefined,
+
+    /// This is the entry point which initializes a application
+    /// that has stored its previous state.
+    /// `stored_state` is that state, the memory is only valid for this function.
     pub fn initRestore(allocator: *std.mem.Allocator, activity: *android.ANativeActivity, stored_state: []const u8) !Self {
         return Self{
             .allocator = allocator,
@@ -35,6 +53,8 @@ pub const AndroidApp = struct {
         };
     }
 
+    /// This is the entry point which initializes a application
+    /// that has no previous state.
     pub fn initFresh(allocator: *std.mem.Allocator, activity: *android.ANativeActivity) !Self {
         return Self{
             .allocator = allocator,
@@ -42,6 +62,9 @@ pub const AndroidApp = struct {
         };
     }
 
+    /// This function is called when the application is successfully initialized.
+    /// It should create a background thread that processes the events and runs until
+    /// the application gets destroyed.
     pub fn start(self: *Self) !void {
         // This code somehow crashes yet. Needs more investigations
         // {
@@ -54,6 +77,8 @@ pub const AndroidApp = struct {
         self.thread = try std.Thread.spawn(self, mainLoop);
     }
 
+    /// Uninitialize the application.
+    /// Don't forget to stop your background thread here!
     pub fn deinit(self: *Self) void {
         @atomicStore(bool, &self.running, false, .SeqCst);
         if (self.thread) |thread| {
@@ -66,12 +91,6 @@ pub const AndroidApp = struct {
         self.* = undefined;
     }
 
-    pub fn onDestroy(self: *Self) void {
-        const allocator = self.allocator;
-        self.deinit();
-        allocator.destroy(self);
-    }
-
     pub fn onNativeWindowCreated(self: *Self, window: *android.ANativeWindow) void {
         var held = self.egl_lock.acquire();
         defer held.release();
@@ -79,6 +98,9 @@ pub const AndroidApp = struct {
         if (self.egl) |*old| {
             old.deinit();
         }
+
+        self.screen_width = @intToFloat(f32, android.ANativeWindow_getWidth(window));
+        self.screen_height = @intToFloat(f32, android.ANativeWindow_getHeight(window));
 
         self.egl = EGLContext.init(window) catch |err| blk: {
             std.log.err(.app, "Failed to initialize EGL for window: {}\n", .{err});
@@ -198,6 +220,32 @@ pub const AndroidApp = struct {
         return false;
     }
 
+    fn insertPoint(self: *Self, point: TouchPoint) void {
+        std.debug.assert(point.index != null);
+        var oldest: *TouchPoint = undefined;
+
+        for (self.touch_points) |*opt, i| {
+            if (opt.*) |*pt| {
+                if (pt.index != null and pt.index.? == point.index.?) {
+                    pt.* = point;
+                    return;
+                }
+
+                if (i == 0) {
+                    oldest = pt;
+                } else {
+                    if (pt.age < oldest.age) {
+                        oldest = pt;
+                    }
+                }
+            } else {
+                opt.* = point;
+                return;
+            }
+        }
+        oldest.* = point;
+    }
+
     fn processMotionEvent(self: *Self, event: *android.AInputEvent) !bool {
         const event_type = @intToEnum(android.AMotionEventActionType, android.AMotionEvent_getAction(event));
 
@@ -256,10 +304,10 @@ pub const AndroidApp = struct {
                 \\Pointer {}:
                 \\  PointerId:   {}
                 \\  ToolType:    {}
-                \\  RawX:        {}
-                \\  RawY:        {}
-                \\  X:           {}
-                \\  Y:           {}
+                \\  RawX:        {d}
+                \\  RawY:        {d}
+                \\  X:           {d}
+                \\  Y:           {d}
                 \\  Pressure:    {}
                 \\  Size:        {}
                 \\  TouchMajor:  {}
@@ -284,6 +332,14 @@ pub const AndroidApp = struct {
                 android.AMotionEvent_getToolMinor(event, i),
                 android.AMotionEvent_getOrientation(event, i),
             });
+
+            self.insertPoint(TouchPoint{
+                .x = android.AMotionEvent_getX(event, i),
+                .y = android.AMotionEvent_getY(event, i),
+                .index = android.AMotionEvent_getPointerId(event, i),
+                .age = android.AMotionEvent_getEventTime(event),
+                .intensity = 1.0,
+            });
         }
 
         return false;
@@ -303,10 +359,18 @@ pub const AndroidApp = struct {
             printConfig(cfg);
         }
 
+        const GLuint = c.GLuint;
+
+        var program: GLuint = undefined;
+        var uPos: c.GLint = undefined;
+        var uAspect: c.GLint = undefined;
+        var uIntensity: c.GLint = undefined;
+
         while (@atomicLoad(bool, &self.running, .SeqCst)) {
 
             // Input process
             {
+                // we lock the handle of our input so we don't have a race condition
                 var held = self.input_lock.acquire();
                 defer held.release();
                 if (self.input) |input| {
@@ -336,6 +400,7 @@ pub const AndroidApp = struct {
 
             // Render process
             {
+                // same for the EGL context
                 var held = self.egl_lock.acquire();
                 defer held.release();
                 if (self.egl) |egl| {
@@ -355,11 +420,88 @@ pub const AndroidApp = struct {
                             std.mem.span(c.glGetString(c.GL_EXTENSIONS)),
                         });
 
+                        program = c.glCreateProgram();
+                        {
+                            var ps = c.glCreateShader(c.GL_VERTEX_SHADER);
+                            var fs = c.glCreateShader(c.GL_FRAGMENT_SHADER);
+
+                            var ps_code =
+                                \\attribute vec2 vPosition;
+                                \\varying vec2 uv;
+                                \\void main() {
+                                \\  uv = vPosition;
+                                \\  gl_Position = vec4(2.0 * uv - 1.0, 0.0, 1.0);
+                                \\}
+                                \\
+                            ;
+                            var fs_code =
+                                \\varying vec2 uv;
+                                \\uniform vec2 uPos;
+                                \\uniform float uAspect;
+                                \\uniform float uIntensity;
+                                \\void main() {
+                                \\  vec2 rel = uv - uPos;
+                                \\  rel.x *= uAspect;
+                                \\  gl_FragColor = vec4(vec3(pow(uIntensity * clamp(1.0 - 10.0 * length(rel), 0.0, 1.0), 2.2)), 1.0);
+                                \\}
+                                \\
+                            ;
+
+                            c.glShaderSource(ps, 1, @ptrCast([*c]const [*c]const u8, &ps_code), null);
+                            c.glShaderSource(fs, 1, @ptrCast([*c]const [*c]const u8, &fs_code), null);
+
+                            c.glCompileShader(ps);
+                            c.glCompileShader(fs);
+
+                            c.glAttachShader(program, ps);
+                            c.glAttachShader(program, fs);
+
+                            c.glBindAttribLocation(program, 0, "vPosition");
+                            c.glLinkProgram(program);
+
+                            c.glDetachShader(program, ps);
+                            c.glDetachShader(program, fs);
+                        }
+
+                        uPos = c.glGetUniformLocation(program, "uPos");
+                        uAspect = c.glGetUniformLocation(program, "uAspect");
+                        uIntensity = c.glGetUniformLocation(program, "uIntensity");
+
+                        c.glEnable(c.GL_BLEND);
+                        c.glBlendFunc(c.GL_ONE, c.GL_ONE);
+                        c.glBlendEquation(c.GL_FUNC_ADD);
+
                         self.egl_init = false;
                     }
 
-                    c.glClearColor(0.0, 0.0, @intToFloat(f32, (loop % 256)) / 255.0, 1.0);
+                    c.glClearColor(0.0, 0.0, 0.0, 1.0);
                     c.glClear(c.GL_COLOR_BUFFER_BIT);
+
+                    c.glUseProgram(program);
+
+                    const vVertices = [_]c.GLfloat{
+                        0.0, 0.0,
+                        1.0, 0.0,
+                        0.0, 1.0,
+                        1.0, 1.0,
+                    };
+
+                    c.glVertexAttribPointer(0, 2, c.GL_FLOAT, c.GL_FALSE, 0, &vVertices);
+                    c.glEnableVertexAttribArray(0);
+
+                    for (self.touch_points) |*pt| {
+                        if (pt.*) |*point| {
+                            c.glUniform1f(uAspect, self.screen_width / self.screen_height);
+                            c.glUniform2f(uPos, point.x / self.screen_width, 1.0 - point.y / self.screen_height);
+                            c.glUniform1f(uIntensity, point.intensity);
+                            c.glDrawArrays(c.GL_TRIANGLE_STRIP, 0, 4);
+
+                            point.intensity -= 0.05;
+                            if (point.intensity <= 0.0) {
+                                pt.* = null;
+                            }
+                        }
+                    }
 
                     // TODO: Render loop here
 
