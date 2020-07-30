@@ -3,18 +3,17 @@
 This repository contains a example on how to create a minimal Android app in Zig.
 
 ## State of the project
-This project contains a really small app skeleton in `src/main.zig` which initializes OpenGL and renders a blue screen.
+This project contains a really small app skeleton in `src/main.zig` which initializes OpenGL and renders a color cycle. Touchscreen events will be displayed as small circles beneath the fingers that will fade as soon as no event for the same finger will happen again.
+
+The code contains some commented examples on how to interface with the JNI to use advanced features of the `ANativeActivity`.
 
 It has no dependencies to C code except for the android libraries, so it can be considered a pure Zig app.
 
 Please note that `build.zig` and `libc/` have hardcoded paths right now and will be changed to a configurable version later.
 
 ## What's missing
-- Input polling/event management
-- Configuration management
-- Save/load app state
-- JNI interfacing for advanced features (fullscreen, keyboard, permissions, send to back, ...)
-- Render [Ziggy](https://github.com/ziglang/logo/blob/master/ziggy.svg)
+- Configuration management example
+- Save/load app state example
 
 ## Requirements & Build
 
