@@ -1,5 +1,5 @@
 const std = @import("std");
-
+const log = std.log.scoped(.egl);
 const c = @import("c.zig");
 const build_options = @import("build_options");
 
@@ -17,18 +17,18 @@ pub const EGLContext = struct {
 
         var egl_display = c.eglGetDisplay(c.EGL_DEFAULT_DISPLAY);
         if (egl_display == c.EGL_NO_DISPLAY) {
-            std.log.err(.egl, "Error: No display found!\n", .{});
+            std.log.err("Error: No display found!\n", .{});
             return error.FailedToInitializeEGL;
         }
 
         var egl_major: EGLint = undefined;
         var egl_minor: EGLint = undefined;
         if (c.eglInitialize(egl_display, &egl_major, &egl_minor) == 0) {
-            std.log.err(.egl, "Error: eglInitialise failed!\n", .{});
+            std.log.err("Error: eglInitialise failed!\n", .{});
             return error.FailedToInitializeEGL;
         }
 
-        std.log.info(.egl,
+        std.log.info(
             \\EGL Version:    {}
             \\EGL Vendor:     {}
             \\EGL Extensions: {}
@@ -63,37 +63,37 @@ pub const EGLContext = struct {
         var config: c.EGLConfig = undefined;
         var num_config: c.EGLint = undefined;
         if (c.eglChooseConfig(egl_display, &config_attribute_list, &config, 1, &num_config) == c.EGL_FALSE) {
-            std.log.err(.egl, "Error: eglChooseConfig failed: 0x{X:0>4}\n", .{c.eglGetError()});
+            std.log.err("Error: eglChooseConfig failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.FailedToInitializeEGL;
         }
 
-        std.log.info(.egl, "Config: {}\n", .{num_config});
+        std.log.info("Config: {}\n", .{num_config});
 
         const context_attribute_list = [_]EGLint{ c.EGL_CONTEXT_CLIENT_VERSION, 2, c.EGL_NONE };
 
         var context = c.eglCreateContext(egl_display, config, c.EGL_NO_CONTEXT, &context_attribute_list);
         if (context == c.EGL_NO_CONTEXT) {
-            std.log.err(.egl, "Error: eglCreateContext failed: 0x{X:0>4}\n", .{c.eglGetError()});
+            log.err("Error: eglCreateContext failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.FailedToInitializeEGL;
         }
         errdefer _ = c.eglDestroyContext(egl_display, context);
 
-        std.log.info(.egl, "Context created: {}\n", .{context});
+        std.log.info("Context created: {}\n", .{context});
 
         var native_window: c.EGLNativeWindowType = @ptrCast(c.EGLNativeWindowType, window); // this is safe, just a C import problem
 
         const android_width = android.ANativeWindow_getWidth(window);
         const android_height = android.ANativeWindow_getHeight(window);
 
-        std.log.info(.egl, "Screen Resolution: {}x{}\n", .{ android_width, android_height });
+        std.log.info("Screen Resolution: {}x{}\n", .{ android_width, android_height });
 
         const window_attribute_list = [_]EGLint{c.EGL_NONE};
         const egl_surface = c.eglCreateWindowSurface(egl_display, config, native_window, &window_attribute_list);
 
-        std.log.info(.egl, "Got Surface: {}\n", .{egl_surface});
+        std.log.info("Got Surface: {}\n", .{egl_surface});
 
         if (egl_surface == c.EGL_NO_SURFACE) {
-            std.log.err(.egl, "Error: eglCreateWindowSurface failed: 0x{X:0>4}\n", .{c.eglGetError()});
+            std.log.err("Error: eglCreateWindowSurface failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.FailedToInitializeEGL;
         }
         errdefer _ = c.eglDestroySurface(egl_display, context);
@@ -113,14 +113,14 @@ pub const EGLContext = struct {
 
     pub fn swapBuffers(self: Self) !void {
         if (c.eglSwapBuffers(self.display, self.surface) == c.EGL_FALSE) {
-            std.log.err(.egl, "Error: eglMakeCurrent failed: 0x{X:0>4}\n", .{c.eglGetError()});
+            std.log.err("Error: eglMakeCurrent failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.EglFailure;
         }
     }
 
     pub fn makeCurrent(self: Self) !void {
         if (c.eglMakeCurrent(self.display, self.surface, self.surface, self.context) == c.EGL_FALSE) {
-            std.log.err(.egl, "Error: eglMakeCurrent failed: 0x{X:0>4}\n", .{c.eglGetError()});
+            std.log.err("Error: eglMakeCurrent failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.EglFailure;
         }
     }

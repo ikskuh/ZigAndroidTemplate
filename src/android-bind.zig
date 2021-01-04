@@ -237,9 +237,9 @@ pub const u_int32_t = u32;
 pub const u_int16_t = u16;
 pub const u_int8_t = u8;
 pub const u_int64_t = u64;
-pub const AAssetManager = @Type(.Opaque);
-pub const AAssetDir = @Type(.Opaque);
-pub const AAsset = @Type(.Opaque);
+pub const AAssetManager = opaque {};
+pub const AAssetDir = opaque {};
+pub const AAsset = opaque {};
 pub const AASSET_MODE_UNKNOWN = @enumToInt(enum_unnamed_10.AASSET_MODE_UNKNOWN);
 pub const AASSET_MODE_RANDOM = @enumToInt(enum_unnamed_10.AASSET_MODE_RANDOM);
 pub const AASSET_MODE_STREAMING = @enumToInt(enum_unnamed_10.AASSET_MODE_STREAMING);
@@ -268,7 +268,7 @@ pub extern fn AAsset_getRemainingLength64(asset: ?*AAsset) off64_t;
 pub extern fn AAsset_openFileDescriptor(asset: ?*AAsset, outStart: [*c]off_t, outLength: [*c]off_t) c_int;
 pub extern fn AAsset_openFileDescriptor64(asset: ?*AAsset, outStart: [*c]off64_t, outLength: [*c]off64_t) c_int;
 pub extern fn AAsset_isAllocated(asset: ?*AAsset) c_int;
-pub const struct_AConfiguration = @Type(.Opaque);
+pub const struct_AConfiguration = opaque {};
 pub const AConfiguration = struct_AConfiguration;
 pub const ACONFIGURATION_ORIENTATION_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_ORIENTATION_ANY);
 pub const ACONFIGURATION_ORIENTATION_PORT = @enumToInt(enum_unnamed_11.ACONFIGURATION_ORIENTATION_PORT);
@@ -494,7 +494,7 @@ pub extern fn AConfiguration_setLayoutDirection(config: ?*AConfiguration, value:
 pub extern fn AConfiguration_diff(config1: ?*AConfiguration, config2: ?*AConfiguration) i32;
 pub extern fn AConfiguration_match(base: ?*AConfiguration, requested: ?*AConfiguration) i32;
 pub extern fn AConfiguration_isBetterThan(base: ?*AConfiguration, @"test": ?*AConfiguration, requested: ?*AConfiguration) i32;
-pub const struct_ALooper = @Type(.Opaque);
+pub const struct_ALooper = opaque {};
 pub const ALooper = struct_ALooper;
 pub extern fn ALooper_forThread(...) ?*ALooper;
 pub const ALOOPER_PREPARE_ALLOW_NON_CALLBACKS = @enumToInt(enum_unnamed_12.ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
@@ -559,9 +559,9 @@ pub const jfloatArray = jarray;
 pub const jdoubleArray = jarray;
 pub const jthrowable = jobject;
 pub const jweak = jobject;
-pub const struct__jfieldID = @Type(.Opaque);
+pub const struct__jfieldID = opaque {};
 pub const jfieldID = ?*struct__jfieldID;
-pub const struct__jmethodID = @Type(.Opaque);
+pub const struct__jmethodID = opaque {};
 pub const jmethodID = ?*struct__jmethodID;
 pub const struct_JNIInvokeInterface = extern struct {
     reserved0: ?*c_void,
@@ -1501,7 +1501,7 @@ const enum_unnamed_18 = extern enum(c_int) {
     AMETA_SCROLL_LOCK_ON = 4194304,
     _,
 };
-pub const AInputEvent = @Type(.Opaque);
+pub const AInputEvent = opaque {};
 pub const AInputEventType = extern enum(c_int) {
     AINPUT_EVENT_TYPE_KEY = 1,
     AINPUT_EVENT_TYPE_MOTION = 2,
@@ -1847,7 +1847,7 @@ pub extern fn AMotionEvent_getHistoricalToolMinor(motion_event: ?*const AInputEv
 pub extern fn AMotionEvent_getHistoricalOrientation(motion_event: ?*const AInputEvent, pointer_index: usize, history_index: usize) f32;
 pub extern fn AMotionEvent_getHistoricalAxisValue(motion_event: ?*const AInputEvent, axis: i32, pointer_index: usize, history_index: usize) f32;
 
-pub const AInputQueue = @Type(.Opaque);
+pub const AInputQueue = opaque {};
 
 pub extern fn AInputQueue_attachLooper(queue: ?*AInputQueue, looper: ?*ALooper, ident: c_int, callback: ALooper_callbackFunc, data: ?*c_void) void;
 pub extern fn AInputQueue_detachLooper(queue: ?*AInputQueue) void;
@@ -2020,7 +2020,7 @@ pub const struct_AHardwareBuffer_Planes = extern struct {
     planes: [4]AHardwareBuffer_Plane,
 };
 pub const AHardwareBuffer_Planes = struct_AHardwareBuffer_Planes;
-pub const struct_AHardwareBuffer = @Type(.Opaque);
+pub const struct_AHardwareBuffer = opaque {};
 pub const AHardwareBuffer = struct_AHardwareBuffer;
 pub extern fn AHardwareBuffer_allocate(desc: [*c]const AHardwareBuffer_Desc, outBuffer: [*c]?*AHardwareBuffer) c_int;
 pub extern fn AHardwareBuffer_acquire(buffer: ?*AHardwareBuffer) void;
@@ -2057,7 +2057,7 @@ pub const enum_ANativeWindowTransform = extern enum(c_int) {
     ANATIVEWINDOW_TRANSFORM_ROTATE_270 = 7,
     _,
 };
-pub const struct_ANativeWindow = @Type(.Opaque);
+pub const struct_ANativeWindow = opaque {};
 pub const ANativeWindow = struct_ANativeWindow;
 pub const struct_ANativeWindow_Buffer = extern struct {
     width: i32,

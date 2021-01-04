@@ -5,6 +5,8 @@ const c = @import("c.zig");
 const android = @import("android-bind.zig");
 const build_options = @import("build_options");
 
+const app_log = std.log.scoped(.app_glue);
+
 // Export the flat functions for now
 // pub const native = android;
 pub usingnamespace android;
@@ -26,12 +28,12 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
         }
     }
 
-    std.log.debug(.app, "Starting on Android Version {}\n", .{
+    app_log.debug("Starting on Android Version {}\n", .{
         sdk_version,
     });
 
     const app = std.heap.c_allocator.create(AndroidApp) catch {
-        std.log.emerg(.app_glue, "Could not create new AndroidApp: OutOfMemory!\n", .{});
+        app_log.emerg("Could not create new AndroidApp: OutOfMemory!\n", .{});
         return;
     };
 
@@ -39,20 +41,20 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
 
     if (savedState) |state| {
         app.* = AndroidApp.initRestore(std.heap.c_allocator, activity, state[0..savedStateSize]) catch |err| {
-            std.log.emerg(.app_glue, "Failed to restore app state: {}\n", .{err});
+            std.emerg("Failed to restore app state: {}\n", .{err});
             std.heap.c_allocator.destroy(app);
             return;
         };
     } else {
         app.* = AndroidApp.initFresh(std.heap.c_allocator, activity) catch |err| {
-            std.log.emerg(.app_glue, "Failed to restore app state: {}\n", .{err});
+            std.emerg("Failed to restore app state: {}\n", .{err});
             std.heap.c_allocator.destroy(app);
             return;
         };
     }
 
     app.start() catch |err| {
-        std.log.emerg(.app_glue, "Failed to start app state: {}\n", .{err});
+        std.log.emerg("Failed to start app state: {}\n", .{err});
         app.deinit();
         std.heap.c_allocator.destroy(app);
         return;
@@ -60,7 +62,7 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
 
     activity.instance = app;
 
-    std.log.debug(.app_glue, "Successfully started the app.\n", .{});
+    app_log.debug("Successfully started the app.\n", .{});
 }
 
 // // Required by C code for now…
@@ -71,7 +73,7 @@ export fn __errno_location() *c_int {
 
 // Android Panic implementation
 pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noreturn {
-    std.log.emerg(.panic, "PANIC: {}\n", .{message});
+    std.log.emerg("PANIC: {}\n", .{message});
 
     std.os.exit(1);
 }
@@ -134,7 +136,7 @@ fn ANativeActivityGlue(comptime App: type) type {
                     @call(.{}, @field(App, func), .{@ptrCast(*App, @alignCast(@alignOf(App), instance))} ++ args);
                 }
             } else {
-                std.log.debug(.app_glue, "ANativeActivity callback {} not available on {}", .{ func, @typeName(App) });
+                app_log.debug("ANativeActivity callback {} not available on {}", .{ func, @typeName(App) });
             }
         }
 
@@ -150,7 +152,7 @@ fn ANativeActivityGlue(comptime App: type) type {
                     }
                 }
             } else {
-                std.log.debug(.app_glue, "ANativeActivity callback onSaveInstanceState not available on {}", .{@typeName(App)});
+                app_log.debug("ANativeActivity callback onSaveInstanceState not available on {}", .{@typeName(App)});
             }
             return null;
         }

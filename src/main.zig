@@ -10,6 +10,8 @@ const build_options = @import("build_options");
 pub const panic = android.panic;
 pub const log = android.log;
 
+const app_log = std.log.scoped(.app);
+
 /// Entry point for our application.
 /// This struct provides the interface to the android support package.
 pub const AndroidApp = struct {
@@ -30,11 +32,11 @@ pub const AndroidApp = struct {
     thread: ?*std.Thread = null,
     running: bool = true,
 
-    egl_lock: std.Mutex = std.Mutex.init(),
+    egl_lock: std.Mutex = std.Mutex{},
     egl: ?EGLContext = null,
     egl_init: bool = true,
 
-    input_lock: std.Mutex = std.Mutex.init(),
+    input_lock: std.Mutex = std.Mutex{},
     input: ?*android.AInputQueue = null,
 
     config: ?*android.AConfiguration = null,
@@ -103,7 +105,7 @@ pub const AndroidApp = struct {
         self.screen_height = @intToFloat(f32, android.ANativeWindow_getHeight(window));
 
         self.egl = EGLContext.init(window) catch |err| blk: {
-            std.log.err(.app, "Failed to initialize EGL for window: {}\n", .{err});
+            app_log.err("Failed to initialize EGL for window: {}\n", .{err});
             break :blk null;
         };
         self.egl_init = true;
@@ -140,7 +142,7 @@ pub const AndroidApp = struct {
         android.AConfiguration_getLanguage(config, &lang);
         android.AConfiguration_getCountry(config, &country);
 
-        std.log.debug(.app,
+        app_log.debug(
             \\MCC:         {}
             \\MNC:         {}
             \\Language:    {}
@@ -180,7 +182,7 @@ pub const AndroidApp = struct {
 
     fn processKeyEvent(self: *Self, event: *android.AInputEvent) !bool {
         const event_type = @intToEnum(android.AKeyEventActionType, android.AKeyEvent_getAction(event));
-        std.log.debug(.input,
+        std.log.scoped(.input).debug(
             \\Key Press Event: {}
             \\Flags:       {}
             \\KeyCode:     {}
@@ -214,7 +216,7 @@ pub const AndroidApp = struct {
             var len = std.unicode.utf8Encode(codepoint, &buf) catch 0;
             var key_text = buf[0..len];
 
-            std.log.info(.input, "Pressed key: '{}' U+{X}", .{ key_text, codepoint });
+            std.log.scoped(.input).info("Pressed key: '{}' U+{X}", .{ key_text, codepoint });
         }
 
         return false;
@@ -258,7 +260,7 @@ pub const AndroidApp = struct {
 
             // this allows you to send the app in the background
             // const success = jni.AndroidSendToBack(true);
-            // std.log.debug(.app, "SendToBack() = {}\n", .{success});
+            // std.app_log.debug(.app, "SendToBack() = {}\n", .{success});
 
             // This is a demo on how to request permissions:
             // if (event_type == .AMOTION_EVENT_ACTION_UP) {
@@ -268,7 +270,7 @@ pub const AndroidApp = struct {
             // }
         }
 
-        std.log.debug(.input,
+        std.log.scoped(.input).debug(
             \\Motion Event {}
             \\Flags:        {}
             \\MetaState:    {}
@@ -300,7 +302,7 @@ pub const AndroidApp = struct {
         var i: usize = 0;
         var cnt = android.AMotionEvent_getPointerCount(event);
         while (i < cnt) : (i += 1) {
-            std.log.debug(.input,
+            std.log.scoped(.input).debug(
                 \\Pointer {}:
                 \\  PointerId:   {}
                 \\  ToolType:    {}
@@ -347,7 +349,7 @@ pub const AndroidApp = struct {
 
     fn mainLoop(self: *Self) !void {
         var loop: usize = 0;
-        std.log.notice(.app, "mainLoop() started\n", .{});
+        app_log.notice("mainLoop() started\n", .{});
 
         self.config = blk: {
             var cfg = android.AConfiguration_new() orelse return error.OutOfMemory;
@@ -386,7 +388,7 @@ pub const AndroidApp = struct {
                             .AINPUT_EVENT_TYPE_KEY => try self.processKeyEvent(event.?),
                             .AINPUT_EVENT_TYPE_MOTION => try self.processMotionEvent(event.?),
                             else => blk: {
-                                std.log.debug(.input, "Unhandled input event type ({})\n", .{event_type});
+                                std.log.scoped(.input).debug("Unhandled input event type ({})\n", .{event_type});
                                 break :blk false;
                             },
                         };
@@ -407,7 +409,7 @@ pub const AndroidApp = struct {
                     try egl.makeCurrent();
 
                     if (self.egl_init) {
-                        std.log.info(.app,
+                        app_log.info(
                             \\GL Vendor:     {}
                             \\GL Renderer:   {}
                             \\GL Version:    {}
@@ -519,6 +521,6 @@ pub const AndroidApp = struct {
 
             std.time.sleep(10 * std.time.ns_per_ms);
         }
-        std.log.notice(.app, "mainLoop() finished\n", .{});
+        app_log.notice("mainLoop() finished\n", .{});
     }
 };

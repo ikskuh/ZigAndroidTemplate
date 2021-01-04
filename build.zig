@@ -48,9 +48,11 @@ const android_target_str = blk: {
 
 fn initAppCommon(b: *std.build.Builder, output_name: []const u8, target: std.zig.CrossTarget, mode: std.builtin.Mode) *std.build.LibExeObjStep {
     const exe = b.addSharedLibrary(output_name, "./src/main.zig", .{
-        .major = 1,
-        .minor = 0,
-        .patch = 0,
+        .versioned = .{
+            .major = 1,
+            .minor = 0,
+            .patch = 0,
+        },
     });
 
     exe.force_pic = true;
@@ -140,9 +142,9 @@ pub fn build(b: *std.build.Builder) !void {
         );
 
         try writer.print(
-            \\    <string name="app_name">{}</string>
-            \\    <string name="lib_name">{}</string>
-            \\    <string name="package_name">{}</string>
+            \\    <string name="app_name">{s}</string>
+            \\    <string name="lib_name">{s}</string>
+            \\    <string name="package_name">{s}</string>
             \\
         , .{
             human_readable_app_name,
@@ -166,17 +168,17 @@ pub fn build(b: *std.build.Builder) !void {
 
         @setEvalBranchQuota(1_000_000);
         try writer.print(
-            \\<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android" package="{}">
+            \\<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android" package="{s}">
             \\
         , .{package_name});
         for (permissions) |perm| {
             try writer.print(
-                \\    <uses-permission android:name="{}"/>
+                \\    <uses-permission android:name="{s}"/>
                 \\
             , .{perm});
         }
         try writer.print(
-            \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name" {} tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon"  android:requestLegacyExternalStorage="true">
+            \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name" {s} tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon"  android:requestLegacyExternalStorage="true">
             \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
             \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
             \\            <intent-filter>
