@@ -363,10 +363,14 @@ pub const AndroidApp = struct {
 
         const GLuint = c.GLuint;
 
-        var program: GLuint = undefined;
+        var touch_program: GLuint = undefined;
+        var shaded_program: GLuint = undefined;
+
         var uPos: c.GLint = undefined;
         var uAspect: c.GLint = undefined;
         var uIntensity: c.GLint = undefined;
+
+        var uTransform: c.GLint = undefined;
 
         while (@atomicLoad(bool, &self.running, .SeqCst)) {
 
@@ -410,10 +414,10 @@ pub const AndroidApp = struct {
 
                     if (self.egl_init) {
                         app_log.info(
-                            \\GL Vendor:     {}
-                            \\GL Renderer:   {}
-                            \\GL Version:    {}
-                            \\GL Extensions: {}
+                            \\GL Vendor:     {s}
+                            \\GL Renderer:   {s}
+                            \\GL Version:    {s}
+                            \\GL Extensions: {s}
                             \\
                         , .{
                             std.mem.span(c.glGetString(c.GL_VENDOR)),
@@ -422,7 +426,7 @@ pub const AndroidApp = struct {
                             std.mem.span(c.glGetString(c.GL_EXTENSIONS)),
                         });
 
-                        program = c.glCreateProgram();
+                        touch_program = c.glCreateProgram();
                         {
                             var ps = c.glCreateShader(c.GL_VERTEX_SHADER);
                             var fs = c.glCreateShader(c.GL_FRAGMENT_SHADER);
@@ -455,23 +459,65 @@ pub const AndroidApp = struct {
                             c.glCompileShader(ps);
                             c.glCompileShader(fs);
 
-                            c.glAttachShader(program, ps);
-                            c.glAttachShader(program, fs);
+                            c.glAttachShader(touch_program, ps);
+                            c.glAttachShader(touch_program, fs);
 
-                            c.glBindAttribLocation(program, 0, "vPosition");
-                            c.glLinkProgram(program);
+                            c.glBindAttribLocation(touch_program, 0, "vPosition");
+                            c.glLinkProgram(touch_program);
 
-                            c.glDetachShader(program, ps);
-                            c.glDetachShader(program, fs);
+                            c.glDetachShader(touch_program, ps);
+                            c.glDetachShader(touch_program, fs);
                         }
 
-                        uPos = c.glGetUniformLocation(program, "uPos");
-                        uAspect = c.glGetUniformLocation(program, "uAspect");
-                        uIntensity = c.glGetUniformLocation(program, "uIntensity");
+                        uPos = c.glGetUniformLocation(touch_program, "uPos");
+                        uAspect = c.glGetUniformLocation(touch_program, "uAspect");
+                        uIntensity = c.glGetUniformLocation(touch_program, "uIntensity");
 
-                        c.glEnable(c.GL_BLEND);
-                        c.glBlendFunc(c.GL_ONE, c.GL_ONE);
-                        c.glBlendEquation(c.GL_FUNC_ADD);
+                        shaded_program = c.glCreateProgram();
+                        {
+                            var ps = c.glCreateShader(c.GL_VERTEX_SHADER);
+                            var fs = c.glCreateShader(c.GL_FRAGMENT_SHADER);
+
+                            var ps_code =
+                                \\attribute vec3 vPosition;
+                                \\attribute vec3 vNormal;
+                                \\uniform mat4 uTransform;
+                                \\varying vec3 normal;
+                                \\void main() {
+                                \\  normal = mat3(uTransform) * vNormal;
+                                \\  gl_Position = uTransform * vec4(vPosition, 1.0);
+                                \\}
+                                \\
+                            ;
+                            var fs_code =
+                                \\varying vec3 normal;
+                                \\void main() {
+                                \\  vec3 base_color = vec3(0.968,0.643,0.113); // #F7A41D
+                                \\  vec3 ldir = normalize(vec3(0.3, 0.4, 2.0));
+                                \\  float l = 0.3 + 0.8 * clamp(-dot(normal, ldir), 0.0, 1.0);
+                                \\  gl_FragColor = vec4(l * base_color,1);
+                                \\}
+                                \\
+                            ;
+
+                            c.glShaderSource(ps, 1, @ptrCast([*c]const [*c]const u8, &ps_code), null);
+                            c.glShaderSource(fs, 1, @ptrCast([*c]const [*c]const u8, &fs_code), null);
+
+                            c.glCompileShader(ps);
+                            c.glCompileShader(fs);
+
+                            c.glAttachShader(shaded_program, ps);
+                            c.glAttachShader(shaded_program, fs);
+
+                            c.glBindAttribLocation(shaded_program, 0, "vPosition");
+                            c.glBindAttribLocation(shaded_program, 1, "vNormal");
+                            c.glLinkProgram(shaded_program);
+
+                            c.glDetachShader(shaded_program, ps);
+                            c.glDetachShader(shaded_program, fs);
+                        }
+
+                        uTransform = c.glGetUniformLocation(shaded_program, "uTransform");
 
                         self.egl_init = false;
                     }
@@ -486,7 +532,7 @@ pub const AndroidApp = struct {
                     );
                     c.glClear(c.GL_COLOR_BUFFER_BIT);
 
-                    c.glUseProgram(program);
+                    c.glUseProgram(touch_program);
 
                     const vVertices = [_]c.GLfloat{
                         0.0, 0.0,
@@ -497,6 +543,12 @@ pub const AndroidApp = struct {
 
                     c.glVertexAttribPointer(0, 2, c.GL_FLOAT, c.GL_FALSE, 0, &vVertices);
                     c.glEnableVertexAttribArray(0);
+                    c.glDisableVertexAttribArray(1);
+
+                    c.glDisable(c.GL_DEPTH_TEST);
+                    c.glEnable(c.GL_BLEND);
+                    c.glBlendFunc(c.GL_ONE, c.GL_ONE);
+                    c.glBlendEquation(c.GL_FUNC_ADD);
 
                     for (self.touch_points) |*pt| {
                         if (pt.*) |*point| {
@@ -512,7 +564,37 @@ pub const AndroidApp = struct {
                         }
                     }
 
-                    // TODO: Render loop here
+                    c.glEnableVertexAttribArray(0);
+                    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(MeshVertex), &mesh[0].pos);
+
+                    c.glEnableVertexAttribArray(1);
+                    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(MeshVertex), &mesh[0].normal);
+
+                    c.glUseProgram(shaded_program);
+
+                    c.glClearDepthf(1.0);
+                    c.glClear(c.GL_DEPTH_BUFFER_BIT);
+
+                    c.glDisable(c.GL_BLEND);
+                    c.glEnable(c.GL_DEPTH_TEST);
+
+                    var matrix = [4][4]f32{
+                        [4]f32{ 1, 0, 0, 0 },
+                        [4]f32{ 0, 1, 0, 0 },
+                        [4]f32{ 0, 0, 1, 0 },
+                        [4]f32{ 0, 0, 0, 1 },
+                    };
+
+                    matrix[1][1] = self.screen_width / self.screen_height;
+
+                    matrix[0][0] = std.math.sin(t);
+                    matrix[2][0] = std.math.cos(t);
+                    matrix[0][2] = std.math.cos(t);
+                    matrix[2][2] = -std.math.sin(t);
+
+                    c.glUniformMatrix4fv(uTransform, 1, c.GL_FALSE, @ptrCast([*]const f32, &matrix));
+
+                    c.glDrawArrays(c.GL_TRIANGLES, 0, mesh.len);
 
                     try egl.swapBuffers();
                 }
@@ -523,4 +605,63 @@ pub const AndroidApp = struct {
         }
         app_log.notice("mainLoop() finished\n", .{});
     }
+};
+
+const MeshVertex = extern struct {
+    pos: Vector4,
+    normal: Vector4,
+};
+
+const Vector4 = extern struct {
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32 = 1.0,
+
+    fn readFromSlice(slice: []const u8) Vector4 {
+        return Vector4{
+            .x = @bitCast(f32, std.mem.readIntLittle(u32, slice[0..4])),
+            .y = @bitCast(f32, std.mem.readIntLittle(u32, slice[4..8])),
+            .z = @bitCast(f32, std.mem.readIntLittle(u32, slice[8..12])),
+            .w = 1.0,
+        };
+    }
+};
+
+const mesh = comptime blk: {
+    const stl_data = @embedFile("logo.stl");
+
+    const count = std.mem.readIntLittle(u32, stl_data[80..][0..4]);
+
+    var slice: []const u8 = stl_data[84..];
+
+    var array: [3 * count]MeshVertex = undefined;
+    var index: usize = 0;
+
+    @setEvalBranchQuota(10_000);
+
+    while (index < count) : (index += 1) {
+        const normal = Vector4.readFromSlice(slice[0..]);
+        const v1 = Vector4.readFromSlice(slice[12..]);
+        const v2 = Vector4.readFromSlice(slice[24..]);
+        const v3 = Vector4.readFromSlice(slice[36..]);
+        const attrib_count = std.mem.readIntLittle(u16, slice[48..50]);
+
+        array[3 * index + 0] = MeshVertex{
+            .pos = v1,
+            .normal = normal,
+        };
+        array[3 * index + 1] = MeshVertex{
+            .pos = v2,
+            .normal = normal,
+        };
+        array[3 * index + 2] = MeshVertex{
+            .pos = v3,
+            .normal = normal,
+        };
+
+        slice = slice[50 + attrib_count ..];
+    }
+
+    break :blk array;
 };

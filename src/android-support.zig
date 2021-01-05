@@ -73,7 +73,7 @@ export fn __errno_location() *c_int {
 
 // Android Panic implementation
 pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noreturn {
-    std.log.emerg("PANIC: {}\n", .{message});
+    std.log.emerg("PANIC: {s}\n", .{message});
 
     std.os.exit(1);
 }
@@ -136,7 +136,7 @@ fn ANativeActivityGlue(comptime App: type) type {
                     @call(.{}, @field(App, func), .{@ptrCast(*App, @alignCast(@alignOf(App), instance))} ++ args);
                 }
             } else {
-                app_log.debug("ANativeActivity callback {} not available on {}", .{ func, @typeName(App) });
+                app_log.debug("ANativeActivity callback {s} not available on {s}", .{ func, @typeName(App) });
             }
         }
 
@@ -152,7 +152,7 @@ fn ANativeActivityGlue(comptime App: type) type {
                     }
                 }
             } else {
-                app_log.debug("ANativeActivity callback onSaveInstanceState not available on {}", .{@typeName(App)});
+                app_log.debug("ANativeActivity callback onSaveInstanceState not available on {s}", .{@typeName(App)});
             }
             return null;
         }

@@ -29,9 +29,9 @@ pub const EGLContext = struct {
         }
 
         std.log.info(
-            \\EGL Version:    {}
-            \\EGL Vendor:     {}
-            \\EGL Extensions: {}
+            \\EGL Version:    {s}
+            \\EGL Vendor:     {s}
+            \\EGL Extensions: {s}
             \\
         , .{
             std.mem.span(c.eglQueryString(egl_display, c.EGL_VERSION)),
