@@ -11,6 +11,12 @@ It has no dependencies to C code except for the android libraries, so it can be 
 
 Please note that `build.zig` and `libc/` have hardcoded paths right now and will be changed to a configurable version later.
 
+## Presentation
+
+There is a [FOSDEM Talk](https://fosdem.org/2021/schedule/event/zig_android/) you can watch here:
+- [MP4 Video](https://video.fosdem.org/2021/D.zig/zig_android.mp4)
+- [WebM Video](https://video.fosdem.org/2021/D.zig/zig_android.webm)
+
 ## What's missing
 - Configuration management example
 - Save/load app state example
