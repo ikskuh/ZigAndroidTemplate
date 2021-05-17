@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Ziggy</string>
-    <string name="lib_name">ziggy</string>
-    <string name="package_name">net.random_projects.ziggy</string>
+    <string name="app_name">Zig OpenGL ES 2.0 Demo</string>
+    <string name="lib_name">zig-gles2-demo</string>
+    <string name="package_name">net.random_projects.zig-gles2-demo</string>
 </resources>

@@ -1,15 +1,15 @@
 const std = @import("std");
 
 // Configure these (required):
-const human_readable_app_name = "Ziggy";
-const app_name = "ziggy";
+const human_readable_app_name = "Zig OpenGL ES 2.0 Demo";
+const app_name = "zig-gles2-demo";
 const package_name = "net.random_projects." ++ app_name;
 
 const android_fullscreen = false;
 
 const permissions = [_][]const u8{
     "android.permission.SET_RELEASE_APP",
-    "android.permission.RECORD_AUDIO",
+    //"android.permission.RECORD_AUDIO",
 };
 
 // Adjust these to your system:
@@ -98,6 +98,8 @@ pub fn build(b: *std.build.Builder) !void {
         .arch_os_abi = "x86_64-linux",
         .cpu_features = "baseline",
     }) catch unreachable;
+
+    std.debug.print("{}\n", .{aarch64_target});
 
     // Standard release options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
