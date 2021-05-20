@@ -281,12 +281,18 @@ pub fn createApp(
 
             const dummy_so = b.addSharedLibrary("source", "dummy-libs/source.zig", .unversioned);
             dummy_so.setTarget(@field(zig_targets, fld.name));
+            dummy_so.setBuildMode(.ReleaseSmall);
+            dummy_so.strip = true;
+            dummy_so.bundle_compiler_rt = false;
 
             const copy_dummy_to_zip = CopyToZipStep.create(b, android_config, apk_file, so_dir, dummy_so);
             copy_dummy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
             sign_step.dependOn(&copy_dummy_to_zip.step);
         }
     }
+
+    // const compress_step = compressApk(b, android_config, apk_file, "zig-out/demo.packed.apk");
+    // compress_step.dependOn(sign_step);
 
     return CreateAppStep{
         .first_step = &make_unsigned_apk.step,
@@ -363,7 +369,6 @@ pub fn compileAppLibrary(
     exe.link_function_sections = true;
     exe.bundle_compiler_rt = true;
     exe.strip = (mode == .ReleaseSmall);
-    exe.single_threaded = true;
 
     exe.defineCMacro("ANDROID");
 

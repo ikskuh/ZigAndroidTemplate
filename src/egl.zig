@@ -1,9 +1,13 @@
 const std = @import("std");
 const log = std.log.scoped(.egl);
-const c = @import("c.zig");
-const build_options = @import("build_options");
+pub const c = @import("c.zig");
 
 const android = @import("android-support.zig");
+
+pub const Version = enum {
+    gles2,
+    gles3,
+};
 
 pub const EGLContext = struct {
     const Self = @This();
@@ -12,7 +16,7 @@ pub const EGLContext = struct {
     surface: c.EGLSurface,
     context: c.EGLContext,
 
-    pub fn init(window: *android.ANativeWindow) !Self {
+    pub fn init(window: *android.ANativeWindow, version: Version) !Self {
         const EGLint = c.EGLint;
 
         var egl_display = c.eglGetDisplay(c.EGL_DEFAULT_DISPLAY);
@@ -56,7 +60,10 @@ pub const EGLContext = struct {
             16,
             // c.EGL_SAMPLES, 1,
             c.EGL_RENDERABLE_TYPE,
-            if (build_options.android_sdk_version >= 28) c.EGL_OPENGL_ES3_BIT else c.EGL_OPENGL_ES2_BIT,
+            switch (version) {
+                .gles3 => c.EGL_OPENGL_ES3_BIT,
+                .gles2 => c.EGL_OPENGL_ES2_BIT,
+            },
             c.EGL_NONE,
         };
 

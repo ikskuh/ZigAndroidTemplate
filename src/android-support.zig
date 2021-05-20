@@ -5,6 +5,9 @@ const c = @import("c.zig");
 const android = @import("android-bind.zig");
 const build_options = @import("build_options");
 
+pub const egl = @import("egl.zig");
+pub const JNI = @import("jni.zig").JNI;
+
 const app_log = std.log.scoped(.app_glue);
 
 // Export the flat functions for now
@@ -102,7 +105,7 @@ pub fn log(
         .warn => android.ANDROID_LOG_WARN,
         .err => android.ANDROID_LOG_ERROR,
         .crit, .alert, .emerg => android.ANDROID_LOG_FATAL,
-    }, "ziggy", msg0.ptr);
+    }, @import("root").android_app_name, msg0.ptr);
 }
 
 /// Returns a wrapper implementation for the given App type which implements all
