@@ -61,12 +61,17 @@ pub const Config = struct {
     build_tools: []const u8,
     key_store: ?KeyStore = null,
     system_tools: SystemTools = .{},
+    host_tools: HostTools,
 };
 
 pub const KeyStore = struct {
     file: []const u8,
     alias: []const u8,
     password: []const u8,
+};
+
+pub const HostTools = struct {
+    zip_add: *std.build.LibExeObjStep,
 };
 
 /// Configuration of the binary paths to all tools that are not included in the android SDK.
@@ -137,36 +142,44 @@ pub fn createApp(
     mode: std.builtin.Mode,
     targets: AppTargetConfig,
 ) CreateAppStep {
-    // try std.fs.cwd().writeFile("./resources/values/strings.xml", blk: {
-    //     var buf = std.ArrayList(u8).init(b.allocator);
-    //     errdefer buf.deinit();
+    const strings_xml = std.fs.path.resolve(b.allocator, &[_][]const u8{
+        b.pathFromRoot(app_config.resource_directory),
+        "values",
+        "strings.xml",
+    }) catch unreachable;
+    if (std.fs.path.dirname(strings_xml)) |dir| {
+        std.fs.cwd().makePath(dir) catch unreachable;
+    }
+    std.fs.cwd().writeFile(strings_xml, blk: {
+        var buf = std.ArrayList(u8).init(b.allocator);
+        errdefer buf.deinit();
 
-    //     var writer = buf.writer();
+        var writer = buf.writer();
 
-    //     try writer.writeAll(
-    //         \\<?xml version="1.0" encoding="utf-8"?>
-    //         \\<resources>
-    //         \\
-    //     );
+        writer.writeAll(
+            \\<?xml version="1.0" encoding="utf-8"?>
+            \\<resources>
+            \\
+        ) catch unreachable;
 
-    //     try writer.print(
-    //         \\    <string name="app_name">{s}</string>
-    //         \\    <string name="lib_name">{s}</string>
-    //         \\    <string name="package_name">{s}</string>
-    //         \\
-    //     , .{
-    //         human_readable_app_name,
-    //         app_name,
-    //         package_name,
-    //     });
+        writer.print(
+            \\    <string name="app_name">{s}</string>
+            \\    <string name="lib_name">{s}</string>
+            \\    <string name="package_name">{s}</string>
+            \\
+        , .{
+            app_config.display_name,
+            app_config.app_name,
+            app_config.package_name,
+        }) catch unreachable;
 
-    //     try writer.writeAll(
-    //         \\</resources>
-    //         \\
-    //     );
+        writer.writeAll(
+            \\</resources>
+            \\
+        ) catch unreachable;
 
-    //     break :blk buf.toOwnedSlice();
-    // });
+        break :blk buf.toOwnedSlice();
+    }) catch unreachable;
 
     const manifest_step = b.addWriteFile("AndroidManifest.xml", blk: {
         var buf = std.ArrayList(u8).init(b.allocator);
@@ -240,35 +253,103 @@ pub fn createApp(
     var libs = std.ArrayList(*std.build.LibExeObjStep).init(b.allocator);
     defer libs.deinit();
 
+    const sign_step = signApk(b, android_config, apk_file);
+
     inline for (std.meta.fields(AppTargetConfig)) |fld| {
+        const target_name = @field(Target, fld.name);
         if (@field(targets, fld.name)) {
             const step = compileAppLibrary(
                 b,
                 android_config,
-                "apk",
                 src_file,
                 app_config,
                 mode,
-                @field(Target, fld.name),
+                target_name,
             );
             libs.append(step) catch unreachable;
-            make_unsigned_apk.step.dependOn(&step.step);
+
+            const so_dir = switch (target_name) {
+                .aarch64 => "lib/arm64-v8a/",
+                .arm => "lib/armeabi/",
+                .x86_64 => "lib/x86_64/",
+                .x86 => "lib/x86/",
+            };
+
+            const copy_to_zip = CopyToZipStep.create(b, android_config, apk_file, so_dir, step);
+            copy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
+            sign_step.dependOn(&copy_to_zip.step);
+
+            const dummy_so = b.addSharedLibrary("source", "dummy-libs/source.zig", .unversioned);
+            dummy_so.setTarget(@field(zig_targets, fld.name));
+
+            const copy_dummy_to_zip = CopyToZipStep.create(b, android_config, apk_file, so_dir, dummy_so);
+            copy_dummy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
+            sign_step.dependOn(&copy_dummy_to_zip.step);
         }
     }
 
     return CreateAppStep{
         .first_step = &make_unsigned_apk.step,
-        .final_step = &make_unsigned_apk.step,
+        .final_step = sign_step,
         .libraries = libs.toOwnedSlice(),
     };
 }
+
+const CopyToZipStep = struct {
+    step: Step,
+    target_dir: []const u8,
+    so: *std.build.LibExeObjStep,
+    android_config: Config,
+    builder: *Builder,
+    apk_file: []const u8,
+
+    fn create(b: *Builder, android_config: Config, apk_file: []const u8, target_dir: []const u8, so: *std.build.LibExeObjStep) *CopyToZipStep {
+        std.debug.assert(target_dir[target_dir.len - 1] == '/');
+        const self = b.allocator.create(CopyToZipStep) catch unreachable;
+        self.* = CopyToZipStep{
+            .step = Step.init(.Custom, "CopyToZip", b.allocator, make),
+            .target_dir = target_dir,
+            .so = so,
+            .android_config = android_config,
+            .builder = b,
+            .apk_file = b.pathFromRoot(apk_file),
+        };
+        self.step.dependOn(&android_config.host_tools.zip_add.step);
+        self.step.dependOn(&so.step);
+        return self;
+    }
+
+    // id: Id, name: []const u8, allocator: *Allocator, makeFn: fn (*Step) anyerror!void
+
+    fn make(step: *Step) !void {
+        const self = @fieldParentPtr(CopyToZipStep, "step", step);
+
+        const output_path = self.so.getOutputPath();
+
+        var zip_name = std.mem.concat(self.builder.allocator, u8, &[_][]const u8{
+            self.target_dir,
+            std.fs.path.basename(output_path),
+        }) catch unreachable;
+
+        const args = [_][]const u8{
+            self.android_config.host_tools.zip_add.getOutputPath(),
+            self.apk_file,
+            output_path,
+            zip_name,
+        };
+
+        var child = try std.ChildProcess.init(&args, self.builder.allocator);
+
+        const term = try child.spawnAndWait();
+        std.debug.assert(term.Exited == 0);
+    }
+};
 
 /// Compiles a single .so file for the given platform.
 /// Note that this function assumes your build script only uses a single `android_config`!
 pub fn compileAppLibrary(
     b: *Builder,
     android_config: Config,
-    output_directory: []const u8,
     src_file: []const u8,
     app_config: AppConfig,
     mode: std.builtin.Mode,
@@ -276,13 +357,7 @@ pub fn compileAppLibrary(
 ) *std.build.LibExeObjStep {
     const ndk_root = b.pathFromRoot(android_config.ndk_root);
 
-    const exe = b.addSharedLibrary(app_config.app_name, src_file, .{
-        .versioned = .{
-            .major = 1,
-            .minor = 0,
-            .patch = 0,
-        },
-    });
+    const exe = b.addSharedLibrary(app_config.app_name, src_file, .unversioned);
 
     exe.force_pic = true;
     exe.link_function_sections = true;
@@ -360,12 +435,12 @@ pub fn compileAppLibrary(
     exe.addIncludeDir(std.fs.path.resolve(b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable);
 
     exe.libc_file = libc_path;
-    exe.output_dir = std.fs.path.resolve(b.allocator, &[_][]const u8{
-        b.cache_root,
-        b.pathFromRoot(output_directory),
-        "lib",
-        config.out_dir,
-    }) catch unreachable;
+    // exe.output_dir = std.fs.path.resolve(b.allocator, &[_][]const u8{
+    //     b.cache_root,
+    //     b.pathFromRoot(output_directory),
+    //     "lib",
+    //     config.out_dir,
+    // }) catch unreachable;
 
     // write libc file:
     createLibCFile(exe.libc_file.?, include_dir, include_dir, lib_dir) catch unreachable;
@@ -436,7 +511,7 @@ pub fn signApk(b: *Builder, android_config: Config, apk_file: []const u8) *Step 
         "-keystore",
         android_config.key_store.?.file,
         "-storepass",
-        android_config.key_store.?.storepass,
+        android_config.key_store.?.password,
         b.pathFromRoot(apk_file),
         android_config.key_store.?.alias,
     });
@@ -516,4 +591,20 @@ pub fn initKeystore(b: *Builder, android_config: Config, key_config: KeyConfig) 
         key_config.distinguished_name,
     });
     return &step.step;
+}
+
+/// Compiles all required additional tools for toolchain.
+/// `root_dir` is the prefix of the path to files in this project. Must end with a slash or be empty.
+pub fn hostTools(b: *Builder, comptime root_dir: []const u8) HostTools {
+    const zip_add = b.addExecutable("zip_add", root_dir ++ "tools/zip_add.zig");
+    zip_add.addCSourceFile(root_dir ++ "vendor/kuba-zip/zip.c", &[_][]const u8{
+        "-std=c99",
+        "-fno-sanitize=undefined",
+    });
+    zip_add.addIncludeDir(root_dir ++ "vendor/kuba-zip");
+    zip_add.linkLibC();
+
+    return HostTools{
+        .zip_add = zip_add,
+    };
 }
