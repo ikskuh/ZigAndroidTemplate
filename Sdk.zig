@@ -26,6 +26,8 @@ folders: UserConfig,
 
 versions: ToolchainVersions,
 
+android_package: std.build.Pkg,
+
 /// Initializes the android SDK.
 /// It requires some input on which versions of the tool chains should be used
 pub fn init(b: *Builder, comptime package_directory: []const u8, user_config: ?UserConfig, versions: ToolchainVersions) !Sdk {
@@ -75,6 +77,10 @@ pub fn init(b: *Builder, comptime package_directory: []const u8, user_config: ?U
         .system_tools = system_tools,
         .folders = actual_user_config,
         .versions = versions,
+        .android_package = std.build.Pkg{
+            .name = "android",
+            .path = package_root ++ "src/android-support.zig",
+        },
     };
 }
 
@@ -347,16 +353,6 @@ pub fn createApp(
             const copy_to_zip = CopyToZipStep.create(sdk, apk_file, so_dir, step);
             copy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
             sign_step.dependOn(&copy_to_zip.step);
-
-            const dummy_so = sdk.b.addSharedLibrary("source", "dummy-libs/source.zig", .unversioned);
-            dummy_so.setTarget(@field(zig_targets, fld.name));
-            dummy_so.setBuildMode(.ReleaseSmall);
-            dummy_so.strip = true;
-            dummy_so.bundle_compiler_rt = false;
-
-            const copy_dummy_to_zip = CopyToZipStep.create(sdk, apk_file, so_dir, dummy_so);
-            copy_dummy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
-            sign_step.dependOn(&copy_dummy_to_zip.step);
         }
     }
 
@@ -431,6 +427,8 @@ pub fn compileAppLibrary(
 
     const exe = sdk.b.addSharedLibrary(app_config.app_name, src_file, .unversioned);
 
+    exe.addPackage(sdk.android_package);
+
     exe.force_pic = true;
     exe.link_function_sections = true;
     exe.bundle_compiler_rt = true;
@@ -477,7 +475,7 @@ pub fn compileAppLibrary(
             .target = zig_targets.x86,
         },
         .x86_64 => TargetConfig{
-            .lib_dir = "x86_64/usr/lib64",
+            .lib_dir = "arch-x86_64/usr/lib64",
             .include_dir = "x86_64-linux-android",
             .out_dir = "x86_64",
             .target = zig_targets.x86_64,
