@@ -439,13 +439,13 @@ pub fn compileAppLibrary(
     const include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ ndk_root, "sysroot/usr/include" }) catch unreachable;
     exe.addIncludeDir(include_dir);
 
+    exe.linkLibC();
     for (app_libs) |lib| {
         exe.linkSystemLibraryName(lib);
     }
 
     exe.addBuildOption(u16, "android_sdk_version", app_config.target_sdk_version orelse sdk.versions.android_sdk_version);
     exe.addBuildOption(bool, "fullscreen", app_config.fullscreen);
-    exe.linkLibC();
     exe.setBuildMode(mode);
 
     const TargetConfig = struct {
