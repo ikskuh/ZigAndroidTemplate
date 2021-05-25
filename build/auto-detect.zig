@@ -19,6 +19,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
 
     const local_config_path = pathConcat(b, build_config_dir, local_config_file);
     const config_path = b.pathFromRoot(local_config_path);
+    const config_dir = b.pathFromRoot(build_config_dir);
 
     // Check for a user config file.
     if (std.fs.cwd().openFile(config_path, .{})) |file| {
@@ -320,7 +321,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
 
     // Write out the new config
     if (config_dirty) {
-        std.fs.cwd().makeDir(local_config_path) catch {};
+        std.fs.cwd().makeDir(config_dir) catch {};
         var file = std.fs.cwd().createFile(config_path, .{}) catch |err| {
             print("Couldn't write config file {s}: {s}\n\n", .{ config_path, @errorName(err) });
             return err;
