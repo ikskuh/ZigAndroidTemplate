@@ -544,6 +544,7 @@ fn createLibCFile(path: []const u8, include_dir: []const u8, sys_include_dir: []
     try writer.print("crt_dir={s}\n", .{crt_dir});
     try writer.writeAll("msvc_lib_dir=\n");
     try writer.writeAll("kernel32_lib_dir=\n");
+    try writer.writeAll("gcc_dir=\n");
 }
 
 pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []const u8) *Step {
