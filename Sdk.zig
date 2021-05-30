@@ -85,7 +85,7 @@ pub fn init(b: *Builder, comptime package_directory: []const u8, user_config: ?U
 }
 
 pub const ToolchainVersions = struct {
-    android_sdk_version: u16 = 29,
+    android_sdk_version: u16 = 28,
     build_tools_version: []const u8 = "28.0.3",
     ndk_version: []const u8 = "21.1.6352462",
 
@@ -278,7 +278,7 @@ pub fn createApp(
 
         if (app_config.fullscreen) {
             writer.writeAll(
-                \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon"  android:requestLegacyExternalStorage="true">
+                \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon" >
                 \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
                 \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
                 \\            <intent-filter>
@@ -438,6 +438,12 @@ pub fn compileAppLibrary(
     mode: std.builtin.Mode,
     target: Target,
 ) *std.build.LibExeObjStep {
+    switch (target) {
+        .arm => @panic("compiling android apps to arm not supported right now. see: https://github.com/ziglang/zig/issues/8885"),
+        .x86 => @panic("compiling android apps to x86 not supported right now. see https://github.com/ziglang/zig/issues/7935"),
+        else => {},
+    }
+
     const ndk_root = sdk.b.pathFromRoot(sdk.folders.android_ndk_root);
 
     const exe = sdk.b.addSharedLibrary(app_config.app_name, src_file, .unversioned);
