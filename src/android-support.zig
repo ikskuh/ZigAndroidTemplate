@@ -98,14 +98,18 @@ pub fn log(
     const msg0 = msg[0..(msg.len - 1) :0];
 
     // Using the function from liblog to write to the actual debug output
-    _ = android.__android_log_write(switch (message_level) {
-        //  => .ANDROID_LOG_VERBOSE,
-        .debug => android.ANDROID_LOG_DEBUG,
-        .info, .notice => android.ANDROID_LOG_INFO,
-        .warn => android.ANDROID_LOG_WARN,
-        .err => android.ANDROID_LOG_ERROR,
-        .crit, .alert, .emerg => android.ANDROID_LOG_FATAL,
-    }, @import("root").android_app_name, msg0.ptr);
+    _ = android.__android_log_write(
+        switch (message_level) {
+            //  => .ANDROID_LOG_VERBOSE,
+            .debug => android.ANDROID_LOG_DEBUG,
+            .info, .notice => android.ANDROID_LOG_INFO,
+            .warn => android.ANDROID_LOG_WARN,
+            .err => android.ANDROID_LOG_ERROR,
+            .crit, .alert, .emerg => android.ANDROID_LOG_FATAL,
+        },
+        build_options.app_name.ptr,
+        msg0.ptr,
+    );
 }
 
 /// Returns a wrapper implementation for the given App type which implements all
