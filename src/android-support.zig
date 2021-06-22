@@ -89,7 +89,7 @@ pub fn log(
     args: anytype,
 ) void {
     var buffer: [8192]u8 = undefined;
-    const msg = std.fmt.bufPrint(&buffer, format ++ "\x00", args) catch {
+    const msg = std.fmt.bufPrint(&buffer, "{s}: " ++ format ++ "\x00", .{@tagName(scope)} ++ args) catch {
         // TODO: Handle missing format here…
         return;
     };

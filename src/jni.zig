@@ -206,6 +206,30 @@ pub const JNI = struct {
         self.invokeJni(.CallVoidMethod, .{ self.activity.clazz, MethodrequestPermissions, perm_array, @as(c_int, 0) });
     }
 
+    pub fn getFilesDir(self: *Self, allocator: *std.mem.Allocator) ![]const u8 {
+        const getFilesDirMethod = self.invokeJni(.GetMethodID, .{ self.activity_class, "getFilesDir", "()Ljava/io/File;" });
+
+        const files_dir = self.env.*.CallObjectMethod(self.env, self.activity.clazz, getFilesDirMethod);
+
+        const fileClass = self.findClass("java/io/File");
+
+        const getPathMethod = self.invokeJni(.GetMethodID, .{ fileClass, "getPath", "()Ljava/lang/String;" });
+
+        const path_string = self.env.*.CallObjectMethod(self.env, files_dir, getPathMethod);
+
+        const utf8_or_null = self.invokeJni(.GetStringUTFChars, .{ path_string, null });
+
+        if (utf8_or_null) |utf8_ptr| {
+            defer self.invokeJni(.ReleaseStringUTFChars, .{ path_string, utf8_ptr });
+
+            const utf8 = std.mem.sliceTo(utf8_ptr, 0);
+
+            return try allocator.dupe(u8, utf8);
+        } else {
+            return error.OutOfMemory;
+        }
+    }
+
     comptime {
         _ = AndroidGetUnicodeChar;
         _ = AndroidMakeFullscreen;

@@ -19,8 +19,8 @@ pub const EGLContext = struct {
     pub fn init(window: *android.ANativeWindow, version: Version) !Self {
         const EGLint = c.EGLint;
 
-        var egl_display = c.eglGetDisplay(c.EGL_DEFAULT_DISPLAY);
-        if (egl_display == c.EGL_NO_DISPLAY) {
+        var egl_display = c.eglGetDisplay(null);
+        if (egl_display == null) {
             std.log.err("Error: No display found!\n", .{});
             return error.FailedToInitializeEGL;
         }
@@ -78,8 +78,8 @@ pub const EGLContext = struct {
 
         const context_attribute_list = [_]EGLint{ c.EGL_CONTEXT_CLIENT_VERSION, 2, c.EGL_NONE };
 
-        var context = c.eglCreateContext(egl_display, config, c.EGL_NO_CONTEXT, &context_attribute_list);
-        if (context == c.EGL_NO_CONTEXT) {
+        var context = c.eglCreateContext(egl_display, config, null, &context_attribute_list);
+        if (context == null) {
             log.err("Error: eglCreateContext failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.FailedToInitializeEGL;
         }
@@ -99,7 +99,7 @@ pub const EGLContext = struct {
 
         std.log.info("Got Surface: {}\n", .{egl_surface});
 
-        if (egl_surface == c.EGL_NO_SURFACE) {
+        if (egl_surface == null) {
             std.log.err("Error: eglCreateWindowSurface failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.FailedToInitializeEGL;
         }
