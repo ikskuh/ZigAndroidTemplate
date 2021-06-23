@@ -212,6 +212,10 @@ const CreateAppStep = struct {
     libraries: []const *std.build.LibExeObjStep,
     build_options: *BuildOptionStep,
 
+    apk_file: std.build.FileSource,
+
+    package_name: []const u8,
+
     pub fn getAndroidPackage(self: @This(), name: []const u8) std.build.Pkg {
         return self.sdk.b.dupePkg(std.build.Pkg{
             .name = name,
@@ -220,6 +224,14 @@ const CreateAppStep = struct {
                 self.build_options.getPackage("build_options"),
             },
         });
+    }
+
+    pub fn install(self: @This()) *Step {
+        return self.sdk.installApp(self.apk_file);
+    }
+
+    pub fn run(self: @This()) *Step {
+        return self.sdk.startApp(self.package_name);
     }
 };
 
@@ -405,6 +417,8 @@ pub fn createApp(
         .final_step = sign_step,
         .libraries = libs.toOwnedSlice(),
         .build_options = build_options,
+        .package_name = sdk.b.dupe(app_config.package_name),
+        .apk_file = (std.build.FileSource{ .path = apk_file }).dupe(sdk.b),
     };
 }
 
@@ -702,14 +716,14 @@ pub fn installApp(sdk: Sdk, apk_file: std.build.FileSource) *Step {
     return &step.step;
 }
 
-pub fn startApp(sdk: Sdk, app_config: AppConfig) *Step {
+pub fn startApp(sdk: Sdk, package_name: []const u8) *Step {
     const step = sdk.b.addSystemCommand(&[_][]const u8{
         sdk.system_tools.adb,
         "shell",
         "am",
         "start",
         "-n",
-        sdk.b.fmt("{s}/android.app.NativeActivity", .{app_config.package_name}),
+        sdk.b.fmt("{s}/android.app.NativeActivity", .{package_name}),
     });
     return &step.step;
 }
