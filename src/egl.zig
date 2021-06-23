@@ -131,4 +131,10 @@ pub const EGLContext = struct {
             return error.EglFailure;
         }
     }
+
+    pub fn release(self: Self) void {
+        if (c.eglMakeCurrent(self.display, self.surface, self.surface, null) == c.EGL_FALSE) {
+            std.log.err("Error: eglMakeCurrent failed: 0x{X:0>4}\n", .{c.eglGetError()});
+        }
+    }
 };

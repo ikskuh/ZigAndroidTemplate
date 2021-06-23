@@ -40,21 +40,20 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
         return;
     };
 
-    activity.callbacks.* = ANativeActivityGlue(AndroidApp).init();
+    activity.callbacks.* = makeNativeActivityGlue(AndroidApp);
 
-    if (savedState) |state| {
-        app.* = AndroidApp.initRestore(std.heap.c_allocator, activity, state[0..savedStateSize]) catch |err| {
-            std.emerg("Failed to restore app state: {}\n", .{err});
-            std.heap.c_allocator.destroy(app);
-            return;
-        };
-    } else {
-        app.* = AndroidApp.initFresh(std.heap.c_allocator, activity) catch |err| {
-            std.emerg("Failed to restore app state: {}\n", .{err});
-            std.heap.c_allocator.destroy(app);
-            return;
-        };
-    }
+    app.* = AndroidApp.init(
+        std.heap.c_allocator,
+        activity,
+        if (savedState) |state|
+            state[0..savedStateSize]
+        else
+            null,
+    ) catch |err| {
+        std.emerg("Failed to restore app state: {}\n", .{err});
+        std.heap.c_allocator.destroy(app);
+        return;
+    };
 
     app.start() catch |err| {
         std.log.emerg("Failed to start app state: {}\n", .{err});
@@ -74,9 +73,60 @@ export fn __errno_location() *c_int {
     return &errno;
 }
 
+const LogWriter = struct {
+    const Error = error{LineTooLong};
+    line_buffer: [4096]u8 = undefined,
+    line_len: usize = 0,
+
+    const Writer = std.io.Writer(*LogWriter, Error, write);
+
+    fn write(self: *LogWriter, buffer: []const u8) !usize {
+        var i: usize = 0;
+        for (buffer) |char| {
+            switch (char) {
+                '\n' => {
+                    std.log.emerg("{s}", .{self.line_buffer[0..self.line_len]});
+                    self.line_len = 0;
+                },
+                else => {
+                    if (self.line_len >= self.line_buffer.len)
+                        return error.LineTooLong;
+                    self.line_buffer[self.line_len] = char;
+                    self.line_len += 1;
+                },
+            }
+        }
+        return i;
+    }
+
+    fn flush(self: *LogWriter) !void {
+        if (self.line_len > 0) {
+            self.write("\n");
+        }
+    }
+
+    fn writer(self: *LogWriter) Writer {
+        return Writer{ .context = self };
+    }
+};
+
 // Android Panic implementation
 pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noreturn {
     std.log.emerg("PANIC: {s}\n", .{message});
+
+    if (stack_trace) |st| {
+        std.log.emerg("{}\n", .{st});
+    }
+
+    if (std.debug.getSelfDebugInfo()) |debug_info| {
+        var logger = LogWriter{};
+
+        std.debug.writeCurrentStackTrace(logger.writer(), debug_info, .no_color, null) catch |err| {
+            std.log.emerg("failed to write stack trace: {s}", .{err});
+        };
+    } else |err| {
+        std.log.emerg("failed to get debug info: {s}", .{err});
+    }
 
     std.os.exit(1);
 }
@@ -114,33 +164,18 @@ pub fn log(
 
 /// Returns a wrapper implementation for the given App type which implements all
 /// ANativeActivity callbacks.
-fn ANativeActivityGlue(comptime App: type) type {
-    return struct {
-        pub fn init() android.ANativeActivityCallbacks {
-            return android.ANativeActivityCallbacks{
-                .onStart = onStart,
-                .onResume = onResume,
-                .onSaveInstanceState = onSaveInstanceState,
-                .onPause = onPause,
-                .onStop = onStop,
-                .onDestroy = onDestroy,
-                .onWindowFocusChanged = onWindowFocusChanged,
-                .onNativeWindowCreated = onNativeWindowCreated,
-                .onNativeWindowResized = onNativeWindowResized,
-                .onNativeWindowRedrawNeeded = onNativeWindowRedrawNeeded,
-                .onNativeWindowDestroyed = onNativeWindowDestroyed,
-                .onInputQueueCreated = onInputQueueCreated,
-                .onInputQueueDestroyed = onInputQueueDestroyed,
-                .onContentRectChanged = onContentRectChanged,
-                .onConfigurationChanged = onConfigurationChanged,
-                .onLowMemory = onLowMemory,
-            };
-        }
-
+fn makeNativeActivityGlue(comptime App: type) android.ANativeActivityCallbacks {
+    const T = struct {
         fn invoke(activity: *android.ANativeActivity, comptime func: []const u8, args: anytype) void {
             if (@hasDecl(App, func)) {
                 if (activity.instance) |instance| {
-                    @call(.{}, @field(App, func), .{@ptrCast(*App, @alignCast(@alignOf(App), instance))} ++ args);
+                    const result = @call(.{}, @field(App, func), .{@ptrCast(*App, @alignCast(@alignOf(App), instance))} ++ args);
+                    switch (@typeInfo(@TypeOf(result))) {
+                        .ErrorUnion => result catch |err| app_log.emerg("{s} returned error {s}", .{ func, @errorName(err) }),
+                        .Void => {},
+                        .ErrorSet => app_log.emerg("{s} returned error {s}", .{ func, @errorName(err) }),
+                        else => @compileError("callback must return void!"),
+                    }
                 }
             } else {
                 app_log.debug("ANativeActivity callback {s} not available on {s}", .{ func, @typeName(App) });
@@ -213,5 +248,23 @@ fn ANativeActivityGlue(comptime App: type) type {
         fn onContentRectChanged(activity: *android.ANativeActivity, rect: *const android.ARect) callconv(.C) void {
             invoke(activity, "onContentRectChanged", .{rect});
         }
+    };
+    return android.ANativeActivityCallbacks{
+        .onStart = T.onStart,
+        .onResume = T.onResume,
+        .onSaveInstanceState = T.onSaveInstanceState,
+        .onPause = T.onPause,
+        .onStop = T.onStop,
+        .onDestroy = T.onDestroy,
+        .onWindowFocusChanged = T.onWindowFocusChanged,
+        .onNativeWindowCreated = T.onNativeWindowCreated,
+        .onNativeWindowResized = T.onNativeWindowResized,
+        .onNativeWindowRedrawNeeded = T.onNativeWindowRedrawNeeded,
+        .onNativeWindowDestroyed = T.onNativeWindowDestroyed,
+        .onInputQueueCreated = T.onInputQueueCreated,
+        .onInputQueueDestroyed = T.onInputQueueDestroyed,
+        .onContentRectChanged = T.onContentRectChanged,
+        .onConfigurationChanged = T.onConfigurationChanged,
+        .onLowMemory = T.onLowMemory,
     };
 }
