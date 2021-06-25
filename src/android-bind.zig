@@ -13,7 +13,7 @@ pub const ANDROID_LOG_WARN = @enumToInt(enum_android_LogPriority.ANDROID_LOG_WAR
 pub const ANDROID_LOG_ERROR = @enumToInt(enum_android_LogPriority.ANDROID_LOG_ERROR);
 pub const ANDROID_LOG_FATAL = @enumToInt(enum_android_LogPriority.ANDROID_LOG_FATAL);
 pub const ANDROID_LOG_SILENT = @enumToInt(enum_android_LogPriority.ANDROID_LOG_SILENT);
-pub const enum_android_LogPriority = extern enum(c_int) {
+pub const enum_android_LogPriority = enum(c_int) {
     ANDROID_LOG_UNKNOWN = 0,
     ANDROID_LOG_DEFAULT = 1,
     ANDROID_LOG_VERBOSE = 2,
@@ -40,7 +40,7 @@ pub const LOG_ID_STATS = @enumToInt(enum_log_id.LOG_ID_STATS);
 pub const LOG_ID_SECURITY = @enumToInt(enum_log_id.LOG_ID_SECURITY);
 pub const LOG_ID_KERNEL = @enumToInt(enum_log_id.LOG_ID_KERNEL);
 pub const LOG_ID_MAX = @enumToInt(enum_log_id.LOG_ID_MAX);
-pub const enum_log_id = extern enum(c_int) {
+pub const enum_log_id = enum(c_int) {
     LOG_ID_MIN = 0,
     LOG_ID_MAIN = 0,
     LOG_ID_RADIO = 1,
@@ -244,7 +244,7 @@ pub const AASSET_MODE_UNKNOWN = @enumToInt(enum_unnamed_10.AASSET_MODE_UNKNOWN);
 pub const AASSET_MODE_RANDOM = @enumToInt(enum_unnamed_10.AASSET_MODE_RANDOM);
 pub const AASSET_MODE_STREAMING = @enumToInt(enum_unnamed_10.AASSET_MODE_STREAMING);
 pub const AASSET_MODE_BUFFER = @enumToInt(enum_unnamed_10.AASSET_MODE_BUFFER);
-const enum_unnamed_10 = extern enum(c_int) {
+const enum_unnamed_10 = enum(c_int) {
     AASSET_MODE_UNKNOWN = 0,
     AASSET_MODE_RANDOM = 1,
     AASSET_MODE_STREAMING = 2,
@@ -268,183 +268,95 @@ pub extern fn AAsset_getRemainingLength64(asset: ?*AAsset) off64_t;
 pub extern fn AAsset_openFileDescriptor(asset: ?*AAsset, outStart: [*c]off_t, outLength: [*c]off_t) c_int;
 pub extern fn AAsset_openFileDescriptor64(asset: ?*AAsset, outStart: [*c]off64_t, outLength: [*c]off64_t) c_int;
 pub extern fn AAsset_isAllocated(asset: ?*AAsset) c_int;
-pub const struct_AConfiguration = opaque {};
-pub const AConfiguration = struct_AConfiguration;
-pub const ACONFIGURATION_ORIENTATION_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_ORIENTATION_ANY);
-pub const ACONFIGURATION_ORIENTATION_PORT = @enumToInt(enum_unnamed_11.ACONFIGURATION_ORIENTATION_PORT);
-pub const ACONFIGURATION_ORIENTATION_LAND = @enumToInt(enum_unnamed_11.ACONFIGURATION_ORIENTATION_LAND);
-pub const ACONFIGURATION_ORIENTATION_SQUARE = @enumToInt(enum_unnamed_11.ACONFIGURATION_ORIENTATION_SQUARE);
-pub const ACONFIGURATION_TOUCHSCREEN_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_TOUCHSCREEN_ANY);
-pub const ACONFIGURATION_TOUCHSCREEN_NOTOUCH = @enumToInt(enum_unnamed_11.ACONFIGURATION_TOUCHSCREEN_NOTOUCH);
-pub const ACONFIGURATION_TOUCHSCREEN_STYLUS = @enumToInt(enum_unnamed_11.ACONFIGURATION_TOUCHSCREEN_STYLUS);
-pub const ACONFIGURATION_TOUCHSCREEN_FINGER = @enumToInt(enum_unnamed_11.ACONFIGURATION_TOUCHSCREEN_FINGER);
-pub const ACONFIGURATION_DENSITY_DEFAULT = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_DEFAULT);
-pub const ACONFIGURATION_DENSITY_LOW = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_LOW);
-pub const ACONFIGURATION_DENSITY_MEDIUM = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_MEDIUM);
-pub const ACONFIGURATION_DENSITY_TV = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_TV);
-pub const ACONFIGURATION_DENSITY_HIGH = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_HIGH);
-pub const ACONFIGURATION_DENSITY_XHIGH = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_XHIGH);
-pub const ACONFIGURATION_DENSITY_XXHIGH = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_XXHIGH);
-pub const ACONFIGURATION_DENSITY_XXXHIGH = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_XXXHIGH);
-pub const ACONFIGURATION_DENSITY_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_ANY);
-pub const ACONFIGURATION_DENSITY_NONE = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY_NONE);
-pub const ACONFIGURATION_KEYBOARD_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYBOARD_ANY);
-pub const ACONFIGURATION_KEYBOARD_NOKEYS = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYBOARD_NOKEYS);
-pub const ACONFIGURATION_KEYBOARD_QWERTY = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYBOARD_QWERTY);
-pub const ACONFIGURATION_KEYBOARD_12KEY = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYBOARD_12KEY);
-pub const ACONFIGURATION_NAVIGATION_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVIGATION_ANY);
-pub const ACONFIGURATION_NAVIGATION_NONAV = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVIGATION_NONAV);
-pub const ACONFIGURATION_NAVIGATION_DPAD = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVIGATION_DPAD);
-pub const ACONFIGURATION_NAVIGATION_TRACKBALL = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVIGATION_TRACKBALL);
-pub const ACONFIGURATION_NAVIGATION_WHEEL = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVIGATION_WHEEL);
-pub const ACONFIGURATION_KEYSHIDDEN_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYSHIDDEN_ANY);
-pub const ACONFIGURATION_KEYSHIDDEN_NO = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYSHIDDEN_NO);
-pub const ACONFIGURATION_KEYSHIDDEN_YES = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYSHIDDEN_YES);
-pub const ACONFIGURATION_KEYSHIDDEN_SOFT = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYSHIDDEN_SOFT);
-pub const ACONFIGURATION_NAVHIDDEN_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVHIDDEN_ANY);
-pub const ACONFIGURATION_NAVHIDDEN_NO = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVHIDDEN_NO);
-pub const ACONFIGURATION_NAVHIDDEN_YES = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVHIDDEN_YES);
-pub const ACONFIGURATION_SCREENSIZE_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENSIZE_ANY);
-pub const ACONFIGURATION_SCREENSIZE_SMALL = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENSIZE_SMALL);
-pub const ACONFIGURATION_SCREENSIZE_NORMAL = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENSIZE_NORMAL);
-pub const ACONFIGURATION_SCREENSIZE_LARGE = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENSIZE_LARGE);
-pub const ACONFIGURATION_SCREENSIZE_XLARGE = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENSIZE_XLARGE);
-pub const ACONFIGURATION_SCREENLONG_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENLONG_ANY);
-pub const ACONFIGURATION_SCREENLONG_NO = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENLONG_NO);
-pub const ACONFIGURATION_SCREENLONG_YES = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENLONG_YES);
-pub const ACONFIGURATION_SCREENROUND_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENROUND_ANY);
-pub const ACONFIGURATION_SCREENROUND_NO = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENROUND_NO);
-pub const ACONFIGURATION_SCREENROUND_YES = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREENROUND_YES);
-pub const ACONFIGURATION_WIDE_COLOR_GAMUT_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_WIDE_COLOR_GAMUT_ANY);
-pub const ACONFIGURATION_WIDE_COLOR_GAMUT_NO = @enumToInt(enum_unnamed_11.ACONFIGURATION_WIDE_COLOR_GAMUT_NO);
-pub const ACONFIGURATION_WIDE_COLOR_GAMUT_YES = @enumToInt(enum_unnamed_11.ACONFIGURATION_WIDE_COLOR_GAMUT_YES);
-pub const ACONFIGURATION_HDR_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_HDR_ANY);
-pub const ACONFIGURATION_HDR_NO = @enumToInt(enum_unnamed_11.ACONFIGURATION_HDR_NO);
-pub const ACONFIGURATION_HDR_YES = @enumToInt(enum_unnamed_11.ACONFIGURATION_HDR_YES);
-pub const ACONFIGURATION_UI_MODE_TYPE_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_TYPE_ANY);
-pub const ACONFIGURATION_UI_MODE_TYPE_NORMAL = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_TYPE_NORMAL);
-pub const ACONFIGURATION_UI_MODE_TYPE_DESK = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_TYPE_DESK);
-pub const ACONFIGURATION_UI_MODE_TYPE_CAR = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_TYPE_CAR);
-pub const ACONFIGURATION_UI_MODE_TYPE_TELEVISION = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_TYPE_TELEVISION);
-pub const ACONFIGURATION_UI_MODE_TYPE_APPLIANCE = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_TYPE_APPLIANCE);
-pub const ACONFIGURATION_UI_MODE_TYPE_WATCH = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_TYPE_WATCH);
-pub const ACONFIGURATION_UI_MODE_TYPE_VR_HEADSET = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_TYPE_VR_HEADSET);
-pub const ACONFIGURATION_UI_MODE_NIGHT_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_NIGHT_ANY);
-pub const ACONFIGURATION_UI_MODE_NIGHT_NO = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_NIGHT_NO);
-pub const ACONFIGURATION_UI_MODE_NIGHT_YES = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE_NIGHT_YES);
-pub const ACONFIGURATION_SCREEN_WIDTH_DP_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREEN_WIDTH_DP_ANY);
-pub const ACONFIGURATION_SCREEN_HEIGHT_DP_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREEN_HEIGHT_DP_ANY);
-pub const ACONFIGURATION_SMALLEST_SCREEN_WIDTH_DP_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_SMALLEST_SCREEN_WIDTH_DP_ANY);
-pub const ACONFIGURATION_LAYOUTDIR_ANY = @enumToInt(enum_unnamed_11.ACONFIGURATION_LAYOUTDIR_ANY);
-pub const ACONFIGURATION_LAYOUTDIR_LTR = @enumToInt(enum_unnamed_11.ACONFIGURATION_LAYOUTDIR_LTR);
-pub const ACONFIGURATION_LAYOUTDIR_RTL = @enumToInt(enum_unnamed_11.ACONFIGURATION_LAYOUTDIR_RTL);
-pub const ACONFIGURATION_MCC = @enumToInt(enum_unnamed_11.ACONFIGURATION_MCC);
-pub const ACONFIGURATION_MNC = @enumToInt(enum_unnamed_11.ACONFIGURATION_MNC);
-pub const ACONFIGURATION_LOCALE = @enumToInt(enum_unnamed_11.ACONFIGURATION_LOCALE);
-pub const ACONFIGURATION_TOUCHSCREEN = @enumToInt(enum_unnamed_11.ACONFIGURATION_TOUCHSCREEN);
-pub const ACONFIGURATION_KEYBOARD = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYBOARD);
-pub const ACONFIGURATION_KEYBOARD_HIDDEN = @enumToInt(enum_unnamed_11.ACONFIGURATION_KEYBOARD_HIDDEN);
-pub const ACONFIGURATION_NAVIGATION = @enumToInt(enum_unnamed_11.ACONFIGURATION_NAVIGATION);
-pub const ACONFIGURATION_ORIENTATION = @enumToInt(enum_unnamed_11.ACONFIGURATION_ORIENTATION);
-pub const ACONFIGURATION_DENSITY = @enumToInt(enum_unnamed_11.ACONFIGURATION_DENSITY);
-pub const ACONFIGURATION_SCREEN_SIZE = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREEN_SIZE);
-pub const ACONFIGURATION_VERSION = @enumToInt(enum_unnamed_11.ACONFIGURATION_VERSION);
-pub const ACONFIGURATION_SCREEN_LAYOUT = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREEN_LAYOUT);
-pub const ACONFIGURATION_UI_MODE = @enumToInt(enum_unnamed_11.ACONFIGURATION_UI_MODE);
-pub const ACONFIGURATION_SMALLEST_SCREEN_SIZE = @enumToInt(enum_unnamed_11.ACONFIGURATION_SMALLEST_SCREEN_SIZE);
-pub const ACONFIGURATION_LAYOUTDIR = @enumToInt(enum_unnamed_11.ACONFIGURATION_LAYOUTDIR);
-pub const ACONFIGURATION_SCREEN_ROUND = @enumToInt(enum_unnamed_11.ACONFIGURATION_SCREEN_ROUND);
-pub const ACONFIGURATION_COLOR_MODE = @enumToInt(enum_unnamed_11.ACONFIGURATION_COLOR_MODE);
-pub const ACONFIGURATION_MNC_ZERO = @enumToInt(enum_unnamed_11.ACONFIGURATION_MNC_ZERO);
-const enum_unnamed_11 = extern enum(c_int) {
-    ACONFIGURATION_ORIENTATION_ANY = 0,
-    ACONFIGURATION_ORIENTATION_PORT = 1,
-    ACONFIGURATION_ORIENTATION_LAND = 2,
-    ACONFIGURATION_ORIENTATION_SQUARE = 3,
-    ACONFIGURATION_TOUCHSCREEN_ANY = 0,
-    ACONFIGURATION_TOUCHSCREEN_NOTOUCH = 1,
-    ACONFIGURATION_TOUCHSCREEN_STYLUS = 2,
-    ACONFIGURATION_TOUCHSCREEN_FINGER = 3,
-    ACONFIGURATION_DENSITY_DEFAULT = 0,
-    ACONFIGURATION_DENSITY_LOW = 120,
-    ACONFIGURATION_DENSITY_MEDIUM = 160,
-    ACONFIGURATION_DENSITY_TV = 213,
-    ACONFIGURATION_DENSITY_HIGH = 240,
-    ACONFIGURATION_DENSITY_XHIGH = 320,
-    ACONFIGURATION_DENSITY_XXHIGH = 480,
-    ACONFIGURATION_DENSITY_XXXHIGH = 640,
-    ACONFIGURATION_DENSITY_ANY = 65534,
-    ACONFIGURATION_DENSITY_NONE = 65535,
-    ACONFIGURATION_KEYBOARD_ANY = 0,
-    ACONFIGURATION_KEYBOARD_NOKEYS = 1,
-    ACONFIGURATION_KEYBOARD_QWERTY = 2,
-    ACONFIGURATION_KEYBOARD_12KEY = 3,
-    ACONFIGURATION_NAVIGATION_ANY = 0,
-    ACONFIGURATION_NAVIGATION_NONAV = 1,
-    ACONFIGURATION_NAVIGATION_DPAD = 2,
-    ACONFIGURATION_NAVIGATION_TRACKBALL = 3,
-    ACONFIGURATION_NAVIGATION_WHEEL = 4,
-    ACONFIGURATION_KEYSHIDDEN_ANY = 0,
-    ACONFIGURATION_KEYSHIDDEN_NO = 1,
-    ACONFIGURATION_KEYSHIDDEN_YES = 2,
-    ACONFIGURATION_KEYSHIDDEN_SOFT = 3,
-    ACONFIGURATION_NAVHIDDEN_ANY = 0,
-    ACONFIGURATION_NAVHIDDEN_NO = 1,
-    ACONFIGURATION_NAVHIDDEN_YES = 2,
-    ACONFIGURATION_SCREENSIZE_ANY = 0,
-    ACONFIGURATION_SCREENSIZE_SMALL = 1,
-    ACONFIGURATION_SCREENSIZE_NORMAL = 2,
-    ACONFIGURATION_SCREENSIZE_LARGE = 3,
-    ACONFIGURATION_SCREENSIZE_XLARGE = 4,
-    ACONFIGURATION_SCREENLONG_ANY = 0,
-    ACONFIGURATION_SCREENLONG_NO = 1,
-    ACONFIGURATION_SCREENLONG_YES = 2,
-    ACONFIGURATION_SCREENROUND_ANY = 0,
-    ACONFIGURATION_SCREENROUND_NO = 1,
-    ACONFIGURATION_SCREENROUND_YES = 2,
-    ACONFIGURATION_WIDE_COLOR_GAMUT_ANY = 0,
-    ACONFIGURATION_WIDE_COLOR_GAMUT_NO = 1,
-    ACONFIGURATION_WIDE_COLOR_GAMUT_YES = 2,
-    ACONFIGURATION_HDR_ANY = 0,
-    ACONFIGURATION_HDR_NO = 1,
-    ACONFIGURATION_HDR_YES = 2,
-    ACONFIGURATION_UI_MODE_TYPE_ANY = 0,
-    ACONFIGURATION_UI_MODE_TYPE_NORMAL = 1,
-    ACONFIGURATION_UI_MODE_TYPE_DESK = 2,
-    ACONFIGURATION_UI_MODE_TYPE_CAR = 3,
-    ACONFIGURATION_UI_MODE_TYPE_TELEVISION = 4,
-    ACONFIGURATION_UI_MODE_TYPE_APPLIANCE = 5,
-    ACONFIGURATION_UI_MODE_TYPE_WATCH = 6,
-    ACONFIGURATION_UI_MODE_TYPE_VR_HEADSET = 7,
-    ACONFIGURATION_UI_MODE_NIGHT_ANY = 0,
-    ACONFIGURATION_UI_MODE_NIGHT_NO = 1,
-    ACONFIGURATION_UI_MODE_NIGHT_YES = 2,
-    ACONFIGURATION_SCREEN_WIDTH_DP_ANY = 0,
-    ACONFIGURATION_SCREEN_HEIGHT_DP_ANY = 0,
-    ACONFIGURATION_SMALLEST_SCREEN_WIDTH_DP_ANY = 0,
-    ACONFIGURATION_LAYOUTDIR_ANY = 0,
-    ACONFIGURATION_LAYOUTDIR_LTR = 1,
-    ACONFIGURATION_LAYOUTDIR_RTL = 2,
-    ACONFIGURATION_MCC = 1,
-    ACONFIGURATION_MNC = 2,
-    ACONFIGURATION_LOCALE = 4,
-    ACONFIGURATION_TOUCHSCREEN = 8,
-    ACONFIGURATION_KEYBOARD = 16,
-    ACONFIGURATION_KEYBOARD_HIDDEN = 32,
-    ACONFIGURATION_NAVIGATION = 64,
-    ACONFIGURATION_ORIENTATION = 128,
-    ACONFIGURATION_DENSITY = 256,
-    ACONFIGURATION_SCREEN_SIZE = 512,
-    ACONFIGURATION_VERSION = 1024,
-    ACONFIGURATION_SCREEN_LAYOUT = 2048,
-    ACONFIGURATION_UI_MODE = 4096,
-    ACONFIGURATION_SMALLEST_SCREEN_SIZE = 8192,
-    ACONFIGURATION_LAYOUTDIR = 16384,
-    ACONFIGURATION_SCREEN_ROUND = 32768,
-    ACONFIGURATION_COLOR_MODE = 65536,
-    ACONFIGURATION_MNC_ZERO = 65535,
-    _,
-};
+
+pub const AConfiguration = opaque {};
+pub const ACONFIGURATION_ORIENTATION_ANY = 0;
+pub const ACONFIGURATION_ORIENTATION_PORT = 1;
+pub const ACONFIGURATION_ORIENTATION_LAND = 2;
+pub const ACONFIGURATION_ORIENTATION_SQUARE = 3;
+pub const ACONFIGURATION_TOUCHSCREEN_ANY = 0;
+pub const ACONFIGURATION_TOUCHSCREEN_NOTOUCH = 1;
+pub const ACONFIGURATION_TOUCHSCREEN_STYLUS = 2;
+pub const ACONFIGURATION_TOUCHSCREEN_FINGER = 3;
+pub const ACONFIGURATION_DENSITY_DEFAULT = 0;
+pub const ACONFIGURATION_DENSITY_LOW = 120;
+pub const ACONFIGURATION_DENSITY_MEDIUM = 160;
+pub const ACONFIGURATION_DENSITY_TV = 213;
+pub const ACONFIGURATION_DENSITY_HIGH = 240;
+pub const ACONFIGURATION_DENSITY_XHIGH = 320;
+pub const ACONFIGURATION_DENSITY_XXHIGH = 480;
+pub const ACONFIGURATION_DENSITY_XXXHIGH = 640;
+pub const ACONFIGURATION_DENSITY_ANY = 65534;
+pub const ACONFIGURATION_DENSITY_NONE = 65535;
+pub const ACONFIGURATION_KEYBOARD_ANY = 0;
+pub const ACONFIGURATION_KEYBOARD_NOKEYS = 1;
+pub const ACONFIGURATION_KEYBOARD_QWERTY = 2;
+pub const ACONFIGURATION_KEYBOARD_12KEY = 3;
+pub const ACONFIGURATION_NAVIGATION_ANY = 0;
+pub const ACONFIGURATION_NAVIGATION_NONAV = 1;
+pub const ACONFIGURATION_NAVIGATION_DPAD = 2;
+pub const ACONFIGURATION_NAVIGATION_TRACKBALL = 3;
+pub const ACONFIGURATION_NAVIGATION_WHEEL = 4;
+pub const ACONFIGURATION_KEYSHIDDEN_ANY = 0;
+pub const ACONFIGURATION_KEYSHIDDEN_NO = 1;
+pub const ACONFIGURATION_KEYSHIDDEN_YES = 2;
+pub const ACONFIGURATION_KEYSHIDDEN_SOFT = 3;
+pub const ACONFIGURATION_NAVHIDDEN_ANY = 0;
+pub const ACONFIGURATION_NAVHIDDEN_NO = 1;
+pub const ACONFIGURATION_NAVHIDDEN_YES = 2;
+pub const ACONFIGURATION_SCREENSIZE_ANY = 0;
+pub const ACONFIGURATION_SCREENSIZE_SMALL = 1;
+pub const ACONFIGURATION_SCREENSIZE_NORMAL = 2;
+pub const ACONFIGURATION_SCREENSIZE_LARGE = 3;
+pub const ACONFIGURATION_SCREENSIZE_XLARGE = 4;
+pub const ACONFIGURATION_SCREENLONG_ANY = 0;
+pub const ACONFIGURATION_SCREENLONG_NO = 1;
+pub const ACONFIGURATION_SCREENLONG_YES = 2;
+pub const ACONFIGURATION_SCREENROUND_ANY = 0;
+pub const ACONFIGURATION_SCREENROUND_NO = 1;
+pub const ACONFIGURATION_SCREENROUND_YES = 2;
+pub const ACONFIGURATION_WIDE_COLOR_GAMUT_ANY = 0;
+pub const ACONFIGURATION_WIDE_COLOR_GAMUT_NO = 1;
+pub const ACONFIGURATION_WIDE_COLOR_GAMUT_YES = 2;
+pub const ACONFIGURATION_HDR_ANY = 0;
+pub const ACONFIGURATION_HDR_NO = 1;
+pub const ACONFIGURATION_HDR_YES = 2;
+pub const ACONFIGURATION_UI_MODE_TYPE_ANY = 0;
+pub const ACONFIGURATION_UI_MODE_TYPE_NORMAL = 1;
+pub const ACONFIGURATION_UI_MODE_TYPE_DESK = 2;
+pub const ACONFIGURATION_UI_MODE_TYPE_CAR = 3;
+pub const ACONFIGURATION_UI_MODE_TYPE_TELEVISION = 4;
+pub const ACONFIGURATION_UI_MODE_TYPE_APPLIANCE = 5;
+pub const ACONFIGURATION_UI_MODE_TYPE_WATCH = 6;
+pub const ACONFIGURATION_UI_MODE_TYPE_VR_HEADSET = 7;
+pub const ACONFIGURATION_UI_MODE_NIGHT_ANY = 0;
+pub const ACONFIGURATION_UI_MODE_NIGHT_NO = 1;
+pub const ACONFIGURATION_UI_MODE_NIGHT_YES = 2;
+pub const ACONFIGURATION_SCREEN_WIDTH_DP_ANY = 0;
+pub const ACONFIGURATION_SCREEN_HEIGHT_DP_ANY = 0;
+pub const ACONFIGURATION_SMALLEST_SCREEN_WIDTH_DP_ANY = 0;
+pub const ACONFIGURATION_LAYOUTDIR_ANY = 0;
+pub const ACONFIGURATION_LAYOUTDIR_LTR = 1;
+pub const ACONFIGURATION_LAYOUTDIR_RTL = 2;
+pub const ACONFIGURATION_MCC = 1;
+pub const ACONFIGURATION_MNC = 2;
+pub const ACONFIGURATION_LOCALE = 4;
+pub const ACONFIGURATION_TOUCHSCREEN = 8;
+pub const ACONFIGURATION_KEYBOARD = 16;
+pub const ACONFIGURATION_KEYBOARD_HIDDEN = 32;
+pub const ACONFIGURATION_NAVIGATION = 64;
+pub const ACONFIGURATION_ORIENTATION = 128;
+pub const ACONFIGURATION_DENSITY = 256;
+pub const ACONFIGURATION_SCREEN_SIZE = 512;
+pub const ACONFIGURATION_VERSION = 1024;
+pub const ACONFIGURATION_SCREEN_LAYOUT = 2048;
+pub const ACONFIGURATION_UI_MODE = 4096;
+pub const ACONFIGURATION_SMALLEST_SCREEN_SIZE = 8192;
+pub const ACONFIGURATION_LAYOUTDIR = 16384;
+pub const ACONFIGURATION_SCREEN_ROUND = 32768;
+pub const ACONFIGURATION_COLOR_MODE = 65536;
+pub const ACONFIGURATION_MNC_ZERO = 65535;
+
 pub extern fn AConfiguration_new(...) ?*AConfiguration;
 pub extern fn AConfiguration_delete(config: ?*AConfiguration) void;
 pub extern fn AConfiguration_fromAssetManager(out: ?*AConfiguration, am: ?*AAssetManager) void;
@@ -498,7 +410,7 @@ pub const struct_ALooper = opaque {};
 pub const ALooper = struct_ALooper;
 pub extern fn ALooper_forThread(...) ?*ALooper;
 pub const ALOOPER_PREPARE_ALLOW_NON_CALLBACKS = @enumToInt(enum_unnamed_12.ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
-const enum_unnamed_12 = extern enum(c_int) {
+const enum_unnamed_12 = enum(c_int) {
     ALOOPER_PREPARE_ALLOW_NON_CALLBACKS = 1,
     _,
 };
@@ -507,7 +419,7 @@ pub const ALOOPER_POLL_WAKE = @enumToInt(enum_unnamed_13.ALOOPER_POLL_WAKE);
 pub const ALOOPER_POLL_CALLBACK = @enumToInt(enum_unnamed_13.ALOOPER_POLL_CALLBACK);
 pub const ALOOPER_POLL_TIMEOUT = @enumToInt(enum_unnamed_13.ALOOPER_POLL_TIMEOUT);
 pub const ALOOPER_POLL_ERROR = @enumToInt(enum_unnamed_13.ALOOPER_POLL_ERROR);
-const enum_unnamed_13 = extern enum(c_int) {
+const enum_unnamed_13 = enum(c_int) {
     ALOOPER_POLL_WAKE = -1,
     ALOOPER_POLL_CALLBACK = -2,
     ALOOPER_POLL_TIMEOUT = -3,
@@ -521,7 +433,7 @@ pub const ALOOPER_EVENT_OUTPUT = @enumToInt(enum_unnamed_14.ALOOPER_EVENT_OUTPUT
 pub const ALOOPER_EVENT_ERROR = @enumToInt(enum_unnamed_14.ALOOPER_EVENT_ERROR);
 pub const ALOOPER_EVENT_HANGUP = @enumToInt(enum_unnamed_14.ALOOPER_EVENT_HANGUP);
 pub const ALOOPER_EVENT_INVALID = @enumToInt(enum_unnamed_14.ALOOPER_EVENT_INVALID);
-const enum_unnamed_14 = extern enum(c_int) {
+const enum_unnamed_14 = enum(c_int) {
     ALOOPER_EVENT_INPUT = 1,
     ALOOPER_EVENT_OUTPUT = 2,
     ALOOPER_EVENT_ERROR = 4,
@@ -589,7 +501,7 @@ pub const JNIInvalidRefType = @enumToInt(enum_jobjectRefType.JNIInvalidRefType);
 pub const JNILocalRefType = @enumToInt(enum_jobjectRefType.JNILocalRefType);
 pub const JNIGlobalRefType = @enumToInt(enum_jobjectRefType.JNIGlobalRefType);
 pub const JNIWeakGlobalRefType = @enumToInt(enum_jobjectRefType.JNIWeakGlobalRefType);
-pub const enum_jobjectRefType = extern enum(c_int) {
+pub const enum_jobjectRefType = enum(c_int) {
     JNIInvalidRefType = 0,
     JNILocalRefType = 1,
     JNIGlobalRefType = 2,
@@ -1159,7 +1071,7 @@ pub const AKEYCODE_REFRESH = @enumToInt(enum_unnamed_16.AKEYCODE_REFRESH);
 pub const AKEYCODE_THUMBS_UP = @enumToInt(enum_unnamed_16.AKEYCODE_THUMBS_UP);
 pub const AKEYCODE_THUMBS_DOWN = @enumToInt(enum_unnamed_16.AKEYCODE_THUMBS_DOWN);
 pub const AKEYCODE_PROFILE_SWITCH = @enumToInt(enum_unnamed_16.AKEYCODE_PROFILE_SWITCH);
-const enum_unnamed_16 = extern enum(c_int) {
+const enum_unnamed_16 = enum(c_int) {
     AKEYCODE_UNKNOWN = 0,
     AKEYCODE_SOFT_LEFT = 1,
     AKEYCODE_SOFT_RIGHT = 2,
@@ -1455,7 +1367,7 @@ pub const AKEY_STATE_UNKNOWN = @enumToInt(enum_unnamed_17.AKEY_STATE_UNKNOWN);
 pub const AKEY_STATE_UP = @enumToInt(enum_unnamed_17.AKEY_STATE_UP);
 pub const AKEY_STATE_DOWN = @enumToInt(enum_unnamed_17.AKEY_STATE_DOWN);
 pub const AKEY_STATE_VIRTUAL = @enumToInt(enum_unnamed_17.AKEY_STATE_VIRTUAL);
-const enum_unnamed_17 = extern enum(c_int) {
+const enum_unnamed_17 = enum(c_int) {
     AKEY_STATE_UNKNOWN = -1,
     AKEY_STATE_UP = 0,
     AKEY_STATE_DOWN = 1,
@@ -1480,7 +1392,7 @@ pub const AMETA_META_RIGHT_ON = @enumToInt(enum_unnamed_18.AMETA_META_RIGHT_ON);
 pub const AMETA_CAPS_LOCK_ON = @enumToInt(enum_unnamed_18.AMETA_CAPS_LOCK_ON);
 pub const AMETA_NUM_LOCK_ON = @enumToInt(enum_unnamed_18.AMETA_NUM_LOCK_ON);
 pub const AMETA_SCROLL_LOCK_ON = @enumToInt(enum_unnamed_18.AMETA_SCROLL_LOCK_ON);
-const enum_unnamed_18 = extern enum(c_int) {
+const enum_unnamed_18 = enum(c_int) {
     AMETA_NONE = 0,
     AMETA_ALT_ON = 2,
     AMETA_ALT_LEFT_ON = 16,
@@ -1502,7 +1414,7 @@ const enum_unnamed_18 = extern enum(c_int) {
     _,
 };
 pub const AInputEvent = opaque {};
-pub const AInputEventType = extern enum(c_int) {
+pub const AInputEventType = enum(c_int) {
     AINPUT_EVENT_TYPE_KEY = 1,
     AINPUT_EVENT_TYPE_MOTION = 2,
     _,
@@ -1510,7 +1422,7 @@ pub const AInputEventType = extern enum(c_int) {
 pub const AKEY_EVENT_ACTION_DOWN = @enumToInt(AKeyEventActionType.AKEY_EVENT_ACTION_DOWN);
 pub const AKEY_EVENT_ACTION_UP = @enumToInt(AKeyEventActionType.AKEY_EVENT_ACTION_UP);
 pub const AKEY_EVENT_ACTION_MULTIPLE = @enumToInt(AKeyEventActionType.AKEY_EVENT_ACTION_MULTIPLE);
-pub const AKeyEventActionType = extern enum(c_int) {
+pub const AKeyEventActionType = enum(c_int) {
     AKEY_EVENT_ACTION_DOWN = 0,
     AKEY_EVENT_ACTION_UP = 1,
     AKEY_EVENT_ACTION_MULTIPLE = 2,
@@ -1527,7 +1439,7 @@ pub const AKEY_EVENT_FLAG_LONG_PRESS = @enumToInt(enum_unnamed_21.AKEY_EVENT_FLA
 pub const AKEY_EVENT_FLAG_CANCELED_LONG_PRESS = @enumToInt(enum_unnamed_21.AKEY_EVENT_FLAG_CANCELED_LONG_PRESS);
 pub const AKEY_EVENT_FLAG_TRACKING = @enumToInt(enum_unnamed_21.AKEY_EVENT_FLAG_TRACKING);
 pub const AKEY_EVENT_FLAG_FALLBACK = @enumToInt(enum_unnamed_21.AKEY_EVENT_FLAG_FALLBACK);
-const enum_unnamed_21 = extern enum(c_int) {
+const enum_unnamed_21 = enum(c_int) {
     AKEY_EVENT_FLAG_WOKE_HERE = 1,
     AKEY_EVENT_FLAG_SOFT_KEYBOARD = 2,
     AKEY_EVENT_FLAG_KEEP_TOUCH_MODE = 4,
@@ -1556,7 +1468,7 @@ pub const AMOTION_EVENT_ACTION_HOVER_ENTER = @enumToInt(AMotionEventActionType.A
 pub const AMOTION_EVENT_ACTION_HOVER_EXIT = @enumToInt(AMotionEventActionType.AMOTION_EVENT_ACTION_HOVER_EXIT);
 pub const AMOTION_EVENT_ACTION_BUTTON_PRESS = @enumToInt(AMotionEventActionType.AMOTION_EVENT_ACTION_BUTTON_PRESS);
 pub const AMOTION_EVENT_ACTION_BUTTON_RELEASE = @enumToInt(AMotionEventActionType.AMOTION_EVENT_ACTION_BUTTON_RELEASE);
-pub const AMotionEventActionType = extern enum(c_int) {
+pub const AMotionEventActionType = enum(c_int) {
     AMOTION_EVENT_ACTION_MASK = 255,
     AMOTION_EVENT_ACTION_POINTER_INDEX_MASK = 65280,
     AMOTION_EVENT_ACTION_DOWN = 0,
@@ -1575,7 +1487,7 @@ pub const AMotionEventActionType = extern enum(c_int) {
     _,
 };
 pub const AMOTION_EVENT_FLAG_WINDOW_IS_OBSCURED = @enumToInt(enum_unnamed_23.AMOTION_EVENT_FLAG_WINDOW_IS_OBSCURED);
-const enum_unnamed_23 = extern enum(c_int) {
+const enum_unnamed_23 = enum(c_int) {
     AMOTION_EVENT_FLAG_WINDOW_IS_OBSCURED = 1,
     _,
 };
@@ -1584,7 +1496,7 @@ pub const AMOTION_EVENT_EDGE_FLAG_TOP = @enumToInt(enum_unnamed_24.AMOTION_EVENT
 pub const AMOTION_EVENT_EDGE_FLAG_BOTTOM = @enumToInt(enum_unnamed_24.AMOTION_EVENT_EDGE_FLAG_BOTTOM);
 pub const AMOTION_EVENT_EDGE_FLAG_LEFT = @enumToInt(enum_unnamed_24.AMOTION_EVENT_EDGE_FLAG_LEFT);
 pub const AMOTION_EVENT_EDGE_FLAG_RIGHT = @enumToInt(enum_unnamed_24.AMOTION_EVENT_EDGE_FLAG_RIGHT);
-const enum_unnamed_24 = extern enum(c_int) {
+const enum_unnamed_24 = enum(c_int) {
     AMOTION_EVENT_EDGE_FLAG_NONE = 0,
     AMOTION_EVENT_EDGE_FLAG_TOP = 1,
     AMOTION_EVENT_EDGE_FLAG_BOTTOM = 2,
@@ -1637,7 +1549,7 @@ pub const AMOTION_EVENT_AXIS_GENERIC_13 = @enumToInt(enum_unnamed_25.AMOTION_EVE
 pub const AMOTION_EVENT_AXIS_GENERIC_14 = @enumToInt(enum_unnamed_25.AMOTION_EVENT_AXIS_GENERIC_14);
 pub const AMOTION_EVENT_AXIS_GENERIC_15 = @enumToInt(enum_unnamed_25.AMOTION_EVENT_AXIS_GENERIC_15);
 pub const AMOTION_EVENT_AXIS_GENERIC_16 = @enumToInt(enum_unnamed_25.AMOTION_EVENT_AXIS_GENERIC_16);
-const enum_unnamed_25 = extern enum(c_int) {
+const enum_unnamed_25 = enum(c_int) {
     AMOTION_EVENT_AXIS_X = 0,
     AMOTION_EVENT_AXIS_Y = 1,
     AMOTION_EVENT_AXIS_PRESSURE = 2,
@@ -1692,7 +1604,7 @@ pub const AMOTION_EVENT_BUTTON_BACK = @enumToInt(enum_unnamed_26.AMOTION_EVENT_B
 pub const AMOTION_EVENT_BUTTON_FORWARD = @enumToInt(enum_unnamed_26.AMOTION_EVENT_BUTTON_FORWARD);
 pub const AMOTION_EVENT_BUTTON_STYLUS_PRIMARY = @enumToInt(enum_unnamed_26.AMOTION_EVENT_BUTTON_STYLUS_PRIMARY);
 pub const AMOTION_EVENT_BUTTON_STYLUS_SECONDARY = @enumToInt(enum_unnamed_26.AMOTION_EVENT_BUTTON_STYLUS_SECONDARY);
-const enum_unnamed_26 = extern enum(c_int) {
+const enum_unnamed_26 = enum(c_int) {
     AMOTION_EVENT_BUTTON_PRIMARY = 1,
     AMOTION_EVENT_BUTTON_SECONDARY = 2,
     AMOTION_EVENT_BUTTON_TERTIARY = 4,
@@ -1707,7 +1619,7 @@ pub const AMOTION_EVENT_TOOL_TYPE_FINGER = @enumToInt(enum_unnamed_27.AMOTION_EV
 pub const AMOTION_EVENT_TOOL_TYPE_STYLUS = @enumToInt(enum_unnamed_27.AMOTION_EVENT_TOOL_TYPE_STYLUS);
 pub const AMOTION_EVENT_TOOL_TYPE_MOUSE = @enumToInt(enum_unnamed_27.AMOTION_EVENT_TOOL_TYPE_MOUSE);
 pub const AMOTION_EVENT_TOOL_TYPE_ERASER = @enumToInt(enum_unnamed_27.AMOTION_EVENT_TOOL_TYPE_ERASER);
-const enum_unnamed_27 = extern enum(c_int) {
+const enum_unnamed_27 = enum(c_int) {
     AMOTION_EVENT_TOOL_TYPE_UNKNOWN = 0,
     AMOTION_EVENT_TOOL_TYPE_FINGER = 1,
     AMOTION_EVENT_TOOL_TYPE_STYLUS = 2,
@@ -1722,7 +1634,7 @@ pub const AINPUT_SOURCE_CLASS_POINTER = @enumToInt(enum_unnamed_28.AINPUT_SOURCE
 pub const AINPUT_SOURCE_CLASS_NAVIGATION = @enumToInt(enum_unnamed_28.AINPUT_SOURCE_CLASS_NAVIGATION);
 pub const AINPUT_SOURCE_CLASS_POSITION = @enumToInt(enum_unnamed_28.AINPUT_SOURCE_CLASS_POSITION);
 pub const AINPUT_SOURCE_CLASS_JOYSTICK = @enumToInt(enum_unnamed_28.AINPUT_SOURCE_CLASS_JOYSTICK);
-const enum_unnamed_28 = extern enum(c_int) {
+const enum_unnamed_28 = enum(c_int) {
     AINPUT_SOURCE_CLASS_MASK = 255,
     AINPUT_SOURCE_CLASS_NONE = 0,
     AINPUT_SOURCE_CLASS_BUTTON = 1,
@@ -1747,7 +1659,7 @@ pub const AINPUT_SOURCE_TOUCH_NAVIGATION = @enumToInt(enum_unnamed_29.AINPUT_SOU
 pub const AINPUT_SOURCE_JOYSTICK = @enumToInt(enum_unnamed_29.AINPUT_SOURCE_JOYSTICK);
 pub const AINPUT_SOURCE_ROTARY_ENCODER = @enumToInt(enum_unnamed_29.AINPUT_SOURCE_ROTARY_ENCODER);
 pub const AINPUT_SOURCE_ANY = @enumToInt(enum_unnamed_29.AINPUT_SOURCE_ANY);
-const enum_unnamed_29 = extern enum(c_int) {
+const enum_unnamed_29 = enum(c_int) {
     AINPUT_SOURCE_UNKNOWN = 0,
     AINPUT_SOURCE_KEYBOARD = 257,
     AINPUT_SOURCE_DPAD = 513,
@@ -1768,7 +1680,7 @@ const enum_unnamed_29 = extern enum(c_int) {
 pub const AINPUT_KEYBOARD_TYPE_NONE = @enumToInt(enum_unnamed_30.AINPUT_KEYBOARD_TYPE_NONE);
 pub const AINPUT_KEYBOARD_TYPE_NON_ALPHABETIC = @enumToInt(enum_unnamed_30.AINPUT_KEYBOARD_TYPE_NON_ALPHABETIC);
 pub const AINPUT_KEYBOARD_TYPE_ALPHABETIC = @enumToInt(enum_unnamed_30.AINPUT_KEYBOARD_TYPE_ALPHABETIC);
-const enum_unnamed_30 = extern enum(c_int) {
+const enum_unnamed_30 = enum(c_int) {
     AINPUT_KEYBOARD_TYPE_NONE = 0,
     AINPUT_KEYBOARD_TYPE_NON_ALPHABETIC = 1,
     AINPUT_KEYBOARD_TYPE_ALPHABETIC = 2,
@@ -1783,7 +1695,7 @@ pub const AINPUT_MOTION_RANGE_TOUCH_MINOR = @enumToInt(enum_unnamed_31.AINPUT_MO
 pub const AINPUT_MOTION_RANGE_TOOL_MAJOR = @enumToInt(enum_unnamed_31.AINPUT_MOTION_RANGE_TOOL_MAJOR);
 pub const AINPUT_MOTION_RANGE_TOOL_MINOR = @enumToInt(enum_unnamed_31.AINPUT_MOTION_RANGE_TOOL_MINOR);
 pub const AINPUT_MOTION_RANGE_ORIENTATION = @enumToInt(enum_unnamed_31.AINPUT_MOTION_RANGE_ORIENTATION);
-const enum_unnamed_31 = extern enum(c_int) {
+const enum_unnamed_31 = enum(c_int) {
     AINPUT_MOTION_RANGE_X = 0,
     AINPUT_MOTION_RANGE_Y = 1,
     AINPUT_MOTION_RANGE_PRESSURE = 2,
@@ -1872,7 +1784,7 @@ pub const ADATASPACE_SRGB = @enumToInt(enum_ADataSpace.ADATASPACE_SRGB);
 pub const ADATASPACE_SCRGB = @enumToInt(enum_ADataSpace.ADATASPACE_SCRGB);
 pub const ADATASPACE_DISPLAY_P3 = @enumToInt(enum_ADataSpace.ADATASPACE_DISPLAY_P3);
 pub const ADATASPACE_BT2020_PQ = @enumToInt(enum_ADataSpace.ADATASPACE_BT2020_PQ);
-pub const enum_ADataSpace = extern enum(c_int) {
+pub const enum_ADataSpace = enum(c_int) {
     ADATASPACE_UNKNOWN = 0,
     ADATASPACE_SCRGB_LINEAR = 406913024,
     ADATASPACE_SRGB = 142671872,
@@ -1902,7 +1814,7 @@ pub const AHARDWAREBUFFER_FORMAT_D32_FLOAT = @enumToInt(enum_AHardwareBuffer_For
 pub const AHARDWAREBUFFER_FORMAT_D32_FLOAT_S8_UINT = @enumToInt(enum_AHardwareBuffer_Format.AHARDWAREBUFFER_FORMAT_D32_FLOAT_S8_UINT);
 pub const AHARDWAREBUFFER_FORMAT_S8_UINT = @enumToInt(enum_AHardwareBuffer_Format.AHARDWAREBUFFER_FORMAT_S8_UINT);
 pub const AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420 = @enumToInt(enum_AHardwareBuffer_Format.AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420);
-pub const enum_AHardwareBuffer_Format = extern enum(c_int) {
+pub const enum_AHardwareBuffer_Format = enum(c_int) {
     AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM = 1,
     AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM = 2,
     AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM = 3,
@@ -1957,7 +1869,7 @@ pub const AHARDWAREBUFFER_USAGE_VENDOR_16 = @enumToInt(enum_AHardwareBuffer_Usag
 pub const AHARDWAREBUFFER_USAGE_VENDOR_17 = @enumToInt(enum_AHardwareBuffer_UsageFlags.AHARDWAREBUFFER_USAGE_VENDOR_17);
 pub const AHARDWAREBUFFER_USAGE_VENDOR_18 = @enumToInt(enum_AHardwareBuffer_UsageFlags.AHARDWAREBUFFER_USAGE_VENDOR_18);
 pub const AHARDWAREBUFFER_USAGE_VENDOR_19 = @enumToInt(enum_AHardwareBuffer_UsageFlags.AHARDWAREBUFFER_USAGE_VENDOR_19);
-pub const enum_AHardwareBuffer_UsageFlags = extern enum(c_ulong) {
+pub const enum_AHardwareBuffer_UsageFlags = enum(c_ulong) {
     AHARDWAREBUFFER_USAGE_CPU_READ_NEVER = 0,
     AHARDWAREBUFFER_USAGE_CPU_READ_RARELY = 2,
     AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN = 3,
@@ -2036,7 +1948,7 @@ pub extern fn AHardwareBuffer_lockAndGetInfo(buffer: ?*AHardwareBuffer, usage: u
 pub const WINDOW_FORMAT_RGBA_8888 = @enumToInt(enum_ANativeWindow_LegacyFormat.WINDOW_FORMAT_RGBA_8888);
 pub const WINDOW_FORMAT_RGBX_8888 = @enumToInt(enum_ANativeWindow_LegacyFormat.WINDOW_FORMAT_RGBX_8888);
 pub const WINDOW_FORMAT_RGB_565 = @enumToInt(enum_ANativeWindow_LegacyFormat.WINDOW_FORMAT_RGB_565);
-pub const enum_ANativeWindow_LegacyFormat = extern enum(c_int) {
+pub const enum_ANativeWindow_LegacyFormat = enum(c_int) {
     WINDOW_FORMAT_RGBA_8888 = 1,
     WINDOW_FORMAT_RGBX_8888 = 2,
     WINDOW_FORMAT_RGB_565 = 4,
@@ -2048,7 +1960,7 @@ pub const ANATIVEWINDOW_TRANSFORM_MIRROR_VERTICAL = @enumToInt(enum_ANativeWindo
 pub const ANATIVEWINDOW_TRANSFORM_ROTATE_90 = @enumToInt(enum_ANativeWindowTransform.ANATIVEWINDOW_TRANSFORM_ROTATE_90);
 pub const ANATIVEWINDOW_TRANSFORM_ROTATE_180 = @enumToInt(enum_ANativeWindowTransform.ANATIVEWINDOW_TRANSFORM_ROTATE_180);
 pub const ANATIVEWINDOW_TRANSFORM_ROTATE_270 = @enumToInt(enum_ANativeWindowTransform.ANATIVEWINDOW_TRANSFORM_ROTATE_270);
-pub const enum_ANativeWindowTransform = extern enum(c_int) {
+pub const enum_ANativeWindowTransform = enum(c_int) {
     ANATIVEWINDOW_TRANSFORM_IDENTITY = 0,
     ANATIVEWINDOW_TRANSFORM_MIRROR_HORIZONTAL = 1,
     ANATIVEWINDOW_TRANSFORM_MIRROR_VERTICAL = 2,
@@ -2116,7 +2028,7 @@ pub extern fn ANativeActivity_setWindowFormat(activity: [*c]ANativeActivity, for
 pub extern fn ANativeActivity_setWindowFlags(activity: [*c]ANativeActivity, addFlags: u32, removeFlags: u32) void;
 pub const ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT = @enumToInt(enum_unnamed_33.ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT);
 pub const ANATIVEACTIVITY_SHOW_SOFT_INPUT_FORCED = @enumToInt(enum_unnamed_33.ANATIVEACTIVITY_SHOW_SOFT_INPUT_FORCED);
-const enum_unnamed_33 = extern enum(c_int) {
+const enum_unnamed_33 = enum(c_int) {
     ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT = 1,
     ANATIVEACTIVITY_SHOW_SOFT_INPUT_FORCED = 2,
     _,
@@ -2124,7 +2036,7 @@ const enum_unnamed_33 = extern enum(c_int) {
 pub extern fn ANativeActivity_showSoftInput(activity: [*c]ANativeActivity, flags: u32) void;
 pub const ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY = @enumToInt(enum_unnamed_34.ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY);
 pub const ANATIVEACTIVITY_HIDE_SOFT_INPUT_NOT_ALWAYS = @enumToInt(enum_unnamed_34.ANATIVEACTIVITY_HIDE_SOFT_INPUT_NOT_ALWAYS);
-const enum_unnamed_34 = extern enum(c_int) {
+const enum_unnamed_34 = enum(c_int) {
     ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY = 1,
     ANATIVEACTIVITY_HIDE_SOFT_INPUT_NOT_ALWAYS = 2,
     _,
@@ -2513,39 +2425,39 @@ pub const _DEBUG = 1;
 pub const ANDROID = 1;
 pub const APPNAME = "ziggy";
 pub const DANDROIDVERSION = 29;
-pub fn va_start(ap: anytype, param: anytype) callconv(.Inline) @TypeOf(__builtin_va_start(ap, param)) {
+pub inline fn va_start(ap: anytype, param: anytype) @TypeOf(__builtin_va_start(ap, param)) {
     return __builtin_va_start(ap, param);
 }
-pub fn va_end(ap: anytype) callconv(.Inline) @TypeOf(__builtin_va_end(ap)) {
+pub inline fn va_end(ap: anytype) @TypeOf(__builtin_va_end(ap)) {
     return __builtin_va_end(ap);
 }
-pub fn va_arg(ap: anytype, type_1: anytype) callconv(.Inline) @TypeOf(__builtin_va_arg(ap, type_1)) {
+pub inline fn va_arg(ap: anytype, type_1: anytype) @TypeOf(__builtin_va_arg(ap, type_1)) {
     return __builtin_va_arg(ap, type_1);
 }
-pub fn __va_copy(d: anytype, s: anytype) callconv(.Inline) @TypeOf(__builtin_va_copy(d, s)) {
+pub inline fn __va_copy(d: anytype, s: anytype) @TypeOf(__builtin_va_copy(d, s)) {
     return __builtin_va_copy(d, s);
 }
-pub fn va_copy(dest: anytype, src: anytype) callconv(.Inline) @TypeOf(__builtin_va_copy(dest, src)) {
+pub inline fn va_copy(dest: anytype, src: anytype) @TypeOf(__builtin_va_copy(dest, src)) {
     return __builtin_va_copy(dest, src);
 }
 pub const __GNUC_VA_LIST = 1;
 pub const __BIONIC__ = 1;
-pub fn __BIONIC_CAST(_k: anytype, _t: anytype, _v: anytype) callconv(.Inline) @TypeOf((@import("std").meta.cast(_t, _v))) {
+pub inline fn __BIONIC_CAST(_: anytype, _t: anytype, _v: anytype) @TypeOf((@import("std").meta.cast(_t, _v))) {
     return (@import("std").meta.cast(_t, _v));
 }
-pub fn __BIONIC_ALIGN(__value: anytype, __alignment: anytype) callconv(.Inline) @TypeOf((__value + (__alignment - 1)) & ~__alignment - 1) {
+pub inline fn __BIONIC_ALIGN(__value: anytype, __alignment: anytype) @TypeOf((__value + (__alignment - 1)) & ~__alignment - 1) {
     return (__value + (__alignment - 1)) & ~__alignment - 1;
 }
-pub fn __P(protos: anytype) callconv(.Inline) @TypeOf(protos) {
+pub inline fn __P(protos: anytype) @TypeOf(protos) {
     return protos;
 }
-pub fn __CONCAT(x: anytype, y: anytype) callconv(.Inline) @TypeOf(__CONCAT1(x, y)) {
+pub inline fn __CONCAT(x: anytype, y: anytype) @TypeOf(__CONCAT1(x, y)) {
     return __CONCAT1(x, y);
 }
-pub fn ___CONCAT(x: anytype, y: anytype) callconv(.Inline) @TypeOf(__CONCAT(x, y)) {
+pub inline fn ___CONCAT(x: anytype, y: anytype) @TypeOf(__CONCAT(x, y)) {
     return __CONCAT(x, y);
 }
-pub fn ___STRING(x: anytype) callconv(.Inline) @TypeOf(__STRING(x)) {
+pub inline fn ___STRING(x: anytype) @TypeOf(__STRING(x)) {
     return __STRING(x);
 }
 pub const __always_inline = __attribute__(__always_inline__);
@@ -2558,76 +2470,76 @@ pub const __packed = __attribute__(__packed__);
 pub const __returns_twice = __attribute__(__returns_twice__);
 pub const __unused = __attribute__(__unused__);
 pub const __used = __attribute__(__used__);
-pub fn __printflike(x: anytype, y: anytype) callconv(.Inline) @TypeOf(__attribute__(__format__(printf, x, y))) {
+pub inline fn __printflike(x: anytype, y: anytype) @TypeOf(__attribute__(__format__(printf, x, y))) {
     return __attribute__(__format__(printf, x, y));
 }
-pub fn __scanflike(x: anytype, y: anytype) callconv(.Inline) @TypeOf(__attribute__(__format__(scanf, x, y))) {
+pub inline fn __scanflike(x: anytype, y: anytype) @TypeOf(__attribute__(__format__(scanf, x, y))) {
     return __attribute__(__format__(scanf, x, y));
 }
-pub fn __strftimelike(x: anytype) callconv(.Inline) @TypeOf(__attribute__(__format__(strftime, x, 0))) {
+pub inline fn __strftimelike(x: anytype) @TypeOf(__attribute__(__format__(strftime, x, 0))) {
     return __attribute__(__format__(strftime, x, 0));
 }
-pub fn __predict_true(exp: anytype) callconv(.Inline) @TypeOf(__builtin_expect(exp != 0, 1)) {
+pub inline fn __predict_true(exp: anytype) @TypeOf(__builtin_expect(exp != 0, 1)) {
     return __builtin_expect(exp != 0, 1);
 }
-pub fn __predict_false(exp: anytype) callconv(.Inline) @TypeOf(__builtin_expect(exp != 0, 0)) {
+pub inline fn __predict_false(exp: anytype) @TypeOf(__builtin_expect(exp != 0, 0)) {
     return __builtin_expect(exp != 0, 0);
 }
 pub const __wur = __attribute__(__warn_unused_result__);
-pub fn __errorattr(msg: anytype) callconv(.Inline) @TypeOf(__attribute__(unavailable(msg))) {
+pub inline fn __errorattr(msg: anytype) @TypeOf(__attribute__(unavailable(msg))) {
     return __attribute__(unavailable(msg));
 }
-pub fn __warnattr(msg: anytype) callconv(.Inline) @TypeOf(__attribute__(deprecated(msg))) {
+pub inline fn __warnattr(msg: anytype) @TypeOf(__attribute__(deprecated(msg))) {
     return __attribute__(deprecated(msg));
 }
-pub fn __warnattr_real(msg: anytype) callconv(.Inline) @TypeOf(__attribute__(deprecated(msg))) {
+pub inline fn __warnattr_real(msg: anytype) @TypeOf(__attribute__(deprecated(msg))) {
     return __attribute__(deprecated(msg));
 }
-pub fn __enable_if(cond: anytype, msg: anytype) callconv(.Inline) @TypeOf(__attribute__(enable_if(cond, msg))) {
+pub inline fn __enable_if(cond: anytype, msg: anytype) @TypeOf(__attribute__(enable_if(cond, msg))) {
     return __attribute__(enable_if(cond, msg));
 }
-pub fn __clang_error_if(cond: anytype, msg: anytype) callconv(.Inline) @TypeOf(__attribute__(diagnose_if(cond, msg, "error"))) {
+pub inline fn __clang_error_if(cond: anytype, msg: anytype) @TypeOf(__attribute__(diagnose_if(cond, msg, "error"))) {
     return __attribute__(diagnose_if(cond, msg, "error"));
 }
-pub fn __clang_warning_if(cond: anytype, msg: anytype) callconv(.Inline) @TypeOf(__attribute__(diagnose_if(cond, msg, "warning"))) {
+pub inline fn __clang_warning_if(cond: anytype, msg: anytype) @TypeOf(__attribute__(diagnose_if(cond, msg, "warning"))) {
     return __attribute__(diagnose_if(cond, msg, "warning"));
 }
-pub fn __RENAME_LDBL(rewrite: anytype, rewrite_api_level: anytype, regular_api_level: anytype) callconv(.Inline) @TypeOf(__INTRODUCED_IN(regular_api_level)) {
+pub inline fn __RENAME_LDBL(_: anytype, rewrite_api_level: anytype, regular_api_level: anytype) @TypeOf(__INTRODUCED_IN(regular_api_level)) {
     return __INTRODUCED_IN(regular_api_level);
 }
-pub fn __RENAME_STAT64(rewrite: anytype, rewrite_api_level: anytype, regular_api_level: anytype) callconv(.Inline) @TypeOf(__INTRODUCED_IN(regular_api_level)) {
+pub inline fn __RENAME_STAT64(_: anytype, rewrite_api_level: anytype, regular_api_level: anytype) @TypeOf(__INTRODUCED_IN(regular_api_level)) {
     return __INTRODUCED_IN(regular_api_level);
 }
 pub const __WORDSIZE = 64;
 pub const __BIONIC_FORTIFY_UNKNOWN_SIZE = size_t - 1;
 pub const __bos_level = 0;
-pub fn __bosn(s: anytype, n: anytype) callconv(.Inline) @TypeOf(__builtin_object_size(s, n)) {
+pub inline fn __bosn(s: anytype, n: anytype) @TypeOf(__builtin_object_size(s, n)) {
     return __builtin_object_size(s, n);
 }
-pub fn __bos(s: anytype) callconv(.Inline) @TypeOf(__bosn(s, __bos_level)) {
+pub inline fn __bos(s: anytype) @TypeOf(__bosn(s, __bos_level)) {
     return __bosn(s, __bos_level);
 }
 pub const __pass_object_size = __pass_object_size_n(__bos_level);
 pub const __pass_object_size0 = __pass_object_size_n(0);
-pub fn __bos_unevaluated_lt(bos_val: anytype, val: anytype) callconv(.Inline) @TypeOf(bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val < val))) {
+pub inline fn __bos_unevaluated_lt(bos_val: anytype, val: anytype) @TypeOf(bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val < val))) {
     return bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val < val));
 }
-pub fn __bos_unevaluated_le(bos_val: anytype, val: anytype) callconv(.Inline) @TypeOf(bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val <= val))) {
+pub inline fn __bos_unevaluated_le(bos_val: anytype, val: anytype) @TypeOf(bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val <= val))) {
     return bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val <= val));
 }
-pub fn __bos_dynamic_check_impl_and(bos_val: anytype, op: anytype, index: anytype, cond: anytype) callconv(.Inline) @TypeOf(bos_val == @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) or ((__builtin_constant_p(index) != 0) and (bos_val ++ (op ++ @boolToInt((index != 0) and (cond != 0))) != 0)))) {
+pub inline fn __bos_dynamic_check_impl_and(bos_val: anytype, op: anytype, index: anytype, cond: anytype) @TypeOf(bos_val == @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) or ((__builtin_constant_p(index) != 0) and (bos_val ++ (op ++ @boolToInt((index != 0) and (cond != 0))) != 0)))) {
     return bos_val == @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) or ((__builtin_constant_p(index) != 0) and (bos_val ++ (op ++ @boolToInt((index != 0) and (cond != 0))) != 0)));
 }
-pub fn __bos_dynamic_check_impl(bos_val: anytype, op: anytype, index: anytype) callconv(.Inline) @TypeOf(__bos_dynamic_check_impl_and(bos_val, op, index, 1)) {
+pub inline fn __bos_dynamic_check_impl(bos_val: anytype, op: anytype, index: anytype) @TypeOf(__bos_dynamic_check_impl_and(bos_val, op, index, 1)) {
     return __bos_dynamic_check_impl_and(bos_val, op, index, 1);
 }
 pub const __overloadable = __attribute__(overloadable);
 pub const __LIBC_HIDDEN__ = __attribute__(visibility("hidden"));
 pub const __LIBC32_LEGACY_PUBLIC__ = __attribute__(visibility("hidden"));
-pub fn __size_mul_overflow(a: anytype, b: anytype, result: anytype) callconv(.Inline) @TypeOf(__builtin_umull_overflow(a, b, result)) {
+pub inline fn __size_mul_overflow(a: anytype, b: anytype, result: anytype) @TypeOf(__builtin_umull_overflow(a, b, result)) {
     return __builtin_umull_overflow(a, b, result);
 }
-pub fn __unsafe_check_mul_overflow(x: anytype, y: anytype) callconv(.Inline) @TypeOf(__SIZE_TYPE__ - (1 / @boolToInt(x < y))) {
+pub inline fn __unsafe_check_mul_overflow(x: anytype, y: anytype) @TypeOf(__SIZE_TYPE__ - (1 / @boolToInt(x < y))) {
     return __SIZE_TYPE__ - (1 / @boolToInt(x < y));
 }
 pub const __VERSIONER_NO_GUARD = __attribute__(annotate("versioner_no_guard"));
@@ -2655,87 +2567,87 @@ pub const __NDK_BETA__ = 0;
 pub const __NDK_BUILD__ = 6352462;
 pub const __NDK_CANARY__ = 0;
 pub const NULL = (@import("std").meta.cast(?*c_void, 0));
-pub fn offsetof(t: anytype, d: anytype) callconv(.Inline) @TypeOf(__builtin_offsetof(t, d)) {
+pub inline fn offsetof(t: anytype, d: anytype) @TypeOf(__builtin_offsetof(t, d)) {
     return __builtin_offsetof(t, d);
 }
 pub const WCHAR_MAX = __WCHAR_MAX__;
 pub const WCHAR_MIN = '\x00';
-pub fn INT8_C(c: anytype) callconv(.Inline) @TypeOf(c) {
+pub inline fn INT8_C(c: anytype) @TypeOf(c) {
     return c;
 }
-pub fn INT_LEAST8_C(c: anytype) callconv(.Inline) @TypeOf(INT8_C(c)) {
+pub inline fn INT_LEAST8_C(c: anytype) @TypeOf(INT8_C(c)) {
     return INT8_C(c);
 }
-pub fn INT_FAST8_C(c: anytype) callconv(.Inline) @TypeOf(INT8_C(c)) {
+pub inline fn INT_FAST8_C(c: anytype) @TypeOf(INT8_C(c)) {
     return INT8_C(c);
 }
-pub fn UINT8_C(c: anytype) callconv(.Inline) @TypeOf(c) {
+pub inline fn UINT8_C(c: anytype) @TypeOf(c) {
     return c;
 }
-pub fn UINT_LEAST8_C(c: anytype) callconv(.Inline) @TypeOf(UINT8_C(c)) {
+pub inline fn UINT_LEAST8_C(c: anytype) @TypeOf(UINT8_C(c)) {
     return UINT8_C(c);
 }
-pub fn UINT_FAST8_C(c: anytype) callconv(.Inline) @TypeOf(UINT8_C(c)) {
+pub inline fn UINT_FAST8_C(c: anytype) @TypeOf(UINT8_C(c)) {
     return UINT8_C(c);
 }
-pub fn INT16_C(c: anytype) callconv(.Inline) @TypeOf(c) {
+pub inline fn INT16_C(c: anytype) @TypeOf(c) {
     return c;
 }
-pub fn INT_LEAST16_C(c: anytype) callconv(.Inline) @TypeOf(INT16_C(c)) {
+pub inline fn INT_LEAST16_C(c: anytype) @TypeOf(INT16_C(c)) {
     return INT16_C(c);
 }
-pub fn INT_FAST16_C(c: anytype) callconv(.Inline) @TypeOf(INT32_C(c)) {
+pub inline fn INT_FAST16_C(c: anytype) @TypeOf(INT32_C(c)) {
     return INT32_C(c);
 }
-pub fn UINT16_C(c: anytype) callconv(.Inline) @TypeOf(c) {
+pub inline fn UINT16_C(c: anytype) @TypeOf(c) {
     return c;
 }
-pub fn UINT_LEAST16_C(c: anytype) callconv(.Inline) @TypeOf(UINT16_C(c)) {
+pub inline fn UINT_LEAST16_C(c: anytype) @TypeOf(UINT16_C(c)) {
     return UINT16_C(c);
 }
-pub fn UINT_FAST16_C(c: anytype) callconv(.Inline) @TypeOf(UINT32_C(c)) {
+pub inline fn UINT_FAST16_C(c: anytype) @TypeOf(UINT32_C(c)) {
     return UINT32_C(c);
 }
-pub fn INT32_C(c: anytype) callconv(.Inline) @TypeOf(c) {
+pub inline fn INT32_C(c: anytype) @TypeOf(c) {
     return c;
 }
-pub fn INT_LEAST32_C(c: anytype) callconv(.Inline) @TypeOf(INT32_C(c)) {
+pub inline fn INT_LEAST32_C(c: anytype) @TypeOf(INT32_C(c)) {
     return INT32_C(c);
 }
-pub fn INT_FAST32_C(c: anytype) callconv(.Inline) @TypeOf(INT32_C(c)) {
+pub inline fn INT_FAST32_C(c: anytype) @TypeOf(INT32_C(c)) {
     return INT32_C(c);
 }
-pub fn UINT_LEAST32_C(c: anytype) callconv(.Inline) @TypeOf(UINT32_C(c)) {
+pub inline fn UINT_LEAST32_C(c: anytype) @TypeOf(UINT32_C(c)) {
     return UINT32_C(c);
 }
-pub fn UINT_FAST32_C(c: anytype) callconv(.Inline) @TypeOf(UINT32_C(c)) {
+pub inline fn UINT_FAST32_C(c: anytype) @TypeOf(UINT32_C(c)) {
     return UINT32_C(c);
 }
-pub fn INT_LEAST64_C(c: anytype) callconv(.Inline) @TypeOf(INT64_C(c)) {
+pub inline fn INT_LEAST64_C(c: anytype) @TypeOf(INT64_C(c)) {
     return INT64_C(c);
 }
-pub fn INT_FAST64_C(c: anytype) callconv(.Inline) @TypeOf(INT64_C(c)) {
+pub inline fn INT_FAST64_C(c: anytype) @TypeOf(INT64_C(c)) {
     return INT64_C(c);
 }
-pub fn UINT_LEAST64_C(c: anytype) callconv(.Inline) @TypeOf(UINT64_C(c)) {
+pub inline fn UINT_LEAST64_C(c: anytype) @TypeOf(UINT64_C(c)) {
     return UINT64_C(c);
 }
-pub fn UINT_FAST64_C(c: anytype) callconv(.Inline) @TypeOf(UINT64_C(c)) {
+pub inline fn UINT_FAST64_C(c: anytype) @TypeOf(UINT64_C(c)) {
     return UINT64_C(c);
 }
-pub fn INTMAX_C(c: anytype) callconv(.Inline) @TypeOf(INT64_C(c)) {
+pub inline fn INTMAX_C(c: anytype) @TypeOf(INT64_C(c)) {
     return INT64_C(c);
 }
-pub fn UINTMAX_C(c: anytype) callconv(.Inline) @TypeOf(UINT64_C(c)) {
+pub inline fn UINTMAX_C(c: anytype) @TypeOf(UINT64_C(c)) {
     return UINT64_C(c);
 }
-pub fn INTPTR_C(c: anytype) callconv(.Inline) @TypeOf(INT64_C(c)) {
+pub inline fn INTPTR_C(c: anytype) @TypeOf(INT64_C(c)) {
     return INT64_C(c);
 }
-pub fn UINTPTR_C(c: anytype) callconv(.Inline) @TypeOf(UINT64_C(c)) {
+pub inline fn UINTPTR_C(c: anytype) @TypeOf(UINT64_C(c)) {
     return UINT64_C(c);
 }
-pub fn PTRDIFF_C(c: anytype) callconv(.Inline) @TypeOf(INT64_C(c)) {
+pub inline fn PTRDIFF_C(c: anytype) @TypeOf(INT64_C(c)) {
     return INT64_C(c);
 }
 pub const INT8_MIN = -128;

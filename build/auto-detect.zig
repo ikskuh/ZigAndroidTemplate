@@ -7,7 +7,7 @@ const UserConfig = Sdk.UserConfig;
 
 // This config stores tool paths for the current machine
 const build_config_dir = ".build_config";
-const local_config_file = "config.json";
+const local_config_file = "android.json";
 
 const print = std.debug.print;
 
@@ -67,7 +67,9 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
                     config_dirty = true;
                 }
             }
-        } else |err| {}
+        } else |_| {
+            // ignore if env var is not found
+        }
     }
 
     if (config.android_sdk_root.len == 0) {
@@ -82,7 +84,9 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
                     config_dirty = true;
                 }
             }
-        } else |err| {}
+        } else |_| {
+            // ignore environment variable failure
+        }
     }
 
     var android_studio_path: []const u8 = "";
@@ -95,26 +99,26 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         const LSTATUS = u32;
         const DWORD = u32;
 
-        const HKEY_CLASSES_ROOT = @intToPtr(HKEY, 0x80000000);
+        // const HKEY_CLASSES_ROOT = @intToPtr(HKEY, 0x80000000);
         const HKEY_CURRENT_USER = @intToPtr(HKEY, 0x80000001);
         const HKEY_LOCAL_MACHINE = @intToPtr(HKEY, 0x80000002);
-        const HKEY_USERS = @intToPtr(HKEY, 0x80000003);
+        // const HKEY_USERS = @intToPtr(HKEY, 0x80000003);
 
-        const RRF_RT_ANY: DWORD = 0xFFFF;
-        const RRF_RT_REG_BINARY: DWORD = 0x08;
-        const RRF_RT_REG_DWORD: DWORD = 0x10;
-        const RRF_RT_REG_EXPAND_SZ: DWORD = 0x04;
-        const RRF_RT_REG_MULTI_SZ: DWORD = 0x20;
-        const RRF_RT_REG_NONE: DWORD = 0x01;
-        const RRF_RT_REG_QWORD: DWORD = 0x40;
+        // const RRF_RT_ANY: DWORD = 0xFFFF;
+        // const RRF_RT_REG_BINARY: DWORD = 0x08;
+        // const RRF_RT_REG_DWORD: DWORD = 0x10;
+        // const RRF_RT_REG_EXPAND_SZ: DWORD = 0x04;
+        // const RRF_RT_REG_MULTI_SZ: DWORD = 0x20;
+        // const RRF_RT_REG_NONE: DWORD = 0x01;
+        // const RRF_RT_REG_QWORD: DWORD = 0x40;
         const RRF_RT_REG_SZ: DWORD = 0x02;
-        const RRF_RT_DWORD = RRF_RT_REG_DWORD | RRF_RT_REG_BINARY;
-        const RRF_RT_QWORD = RRF_RT_REG_QWORD | RRF_RT_REG_BINARY;
+        // const RRF_RT_DWORD = RRF_RT_REG_DWORD | RRF_RT_REG_BINARY;
+        // const RRF_RT_QWORD = RRF_RT_REG_QWORD | RRF_RT_REG_BINARY;
 
-        const RRF_NOEXPAND: DWORD = 0x10000000;
-        const RRF_ZEROONFAILURE: DWORD = 0x20000000;
-        const RRF_SUBKEY_WOW6464KEY: DWORD = 0x00010000;
-        const RRF_SUBKEY_WOW6432KEY: DWORD = 0x00020000;
+        // const RRF_NOEXPAND: DWORD = 0x10000000;
+        // const RRF_ZEROONFAILURE: DWORD = 0x20000000;
+        // const RRF_SUBKEY_WOW6464KEY: DWORD = 0x00010000;
+        // const RRF_SUBKEY_WOW6432KEY: DWORD = 0x00020000;
 
         const ERROR_SUCCESS: LSTATUS = 0;
         const ERROR_MORE_DATA: LSTATUS = 234;
@@ -196,7 +200,9 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
                     config.android_sdk_root = sdk_path;
                     config_dirty = true;
                 }
-            } else |err| {}
+            } else |_| {
+                // ignore env
+            }
         }
     }
 
@@ -241,7 +247,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
                     config_dirty = true;
                 }
             }
-        } else |err| {}
+        } else |_| {}
     }
 
     // Then check for a side-by-side install
@@ -282,7 +288,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
                     config_dirty = true;
                 }
             }
-        } else |err| {}
+        } else |_| {}
     }
 
     // Look for `where jarsigner`

@@ -391,7 +391,7 @@ pub fn createApp(
                 app_config,
                 mode,
                 target_name,
-                build_options.getPackage("build_options"),
+                //   build_options.getPackage("build_options"),
             );
             libs.append(step) catch unreachable;
 
@@ -539,7 +539,7 @@ pub fn compileAppLibrary(
     app_config: AppConfig,
     mode: std.builtin.Mode,
     target: Target,
-    build_options: std.build.Pkg,
+    // build_options: std.build.Pkg,
 ) *std.build.LibExeObjStep {
     switch (target) {
         .arm => @panic("compiling android apps to arm not supported right now. see: https://github.com/ziglang/zig/issues/8885"),
@@ -607,7 +607,6 @@ pub fn compileAppLibrary(
         sdk.versions.android_sdk_version,
     });
 
-    var temp_buffer: [64]u8 = undefined;
     const libc_path = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{
         sdk.b.cache_root,
         "android-libc",
