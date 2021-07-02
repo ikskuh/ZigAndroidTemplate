@@ -177,7 +177,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
             }
             if (reg.getStringAlloc(b.allocator, android_studio_key, "SdkPath")) |sdk_path| {
                 if (sdk_path.len > 0) {
-                    if (findProblemWithAndroidSdk(b, sdk_path)) |problem| {
+                    if (findProblemWithAndroidSdk(b, versions, sdk_path)) |problem| {
                         print("Cannot use Android Studio sdk ({s}):\n    {s}\n", .{ sdk_path, problem });
                     } else {
                         print("Using android sdk from Android Studio: {s}\n", .{sdk_path});
@@ -193,7 +193,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         if (config.android_sdk_root.len == 0) {
             if (std.process.getEnvVarOwned(b.allocator, "LOCALAPPDATA")) |appdata_local| {
                 const sdk_path = pathConcat(b, appdata_local, "Android");
-                if (findProblemWithAndroidSdk(b, sdk_path)) |problem| {
+                if (findProblemWithAndroidSdk(b, versions, sdk_path)) |problem| {
                     print("Cannot use default Android Studio SDK\n    at {s}:\n    {s}\n", .{ sdk_path, problem });
                 } else {
                     print("Using android sdk from Android Studio: {s}\n", .{sdk_path});
