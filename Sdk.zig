@@ -199,12 +199,12 @@ pub const SystemTools = struct {
 /// The configuration which targets a app should be built for.
 pub const AppTargetConfig = struct {
     aarch64: bool = true,
-    arm: bool = true,
+    arm: bool = false, // re-enable when https://github.com/ziglang/zig/issues/8885 is resolved
     x86_64: bool = true,
     x86: bool = false,
 };
 
-const CreateAppStep = struct {
+pub const CreateAppStep = struct {
     sdk: *Sdk,
     first_step: *std.build.Step,
     final_step: *std.build.Step,
