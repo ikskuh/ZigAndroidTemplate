@@ -2505,9 +2505,11 @@ pub inline fn __clang_warning_if(cond: anytype, msg: anytype) @TypeOf(__attribut
     return __attribute__(diagnose_if(cond, msg, "warning"));
 }
 pub inline fn __RENAME_LDBL(_: anytype, rewrite_api_level: anytype, regular_api_level: anytype) @TypeOf(__INTRODUCED_IN(regular_api_level)) {
+    _ = rewrite_api_level;
     return __INTRODUCED_IN(regular_api_level);
 }
 pub inline fn __RENAME_STAT64(_: anytype, rewrite_api_level: anytype, regular_api_level: anytype) @TypeOf(__INTRODUCED_IN(regular_api_level)) {
+    _ = rewrite_api_level;
     return __INTRODUCED_IN(regular_api_level);
 }
 pub const __WORDSIZE = 64;
