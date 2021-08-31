@@ -33,5 +33,10 @@ If all of the above is done, you should be able to build the app by running `zig
 
 There are convenience options with `zig build push` (installs the app on a connected phone) and `zig build run` (which installs, then runs the app).
 
+## Getting started
+
+Check out the [`build.zig`](build.zig) to see how to build a new android app, and [`example/main.zig`](example/main.zig) to see how to create a basic application. All of this is still very rough, though.
+
 ## Credits
 Huge thanks to [@cnlohr](https://github.com/cnlohr) to create [rawdrawandroid](https://github.com/cnlohr/rawdrawandroid) and making this project possible!
+
