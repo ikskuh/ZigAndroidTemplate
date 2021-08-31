@@ -1,14 +1,13 @@
 const std = @import("std");
 
-const c = @import("c.zig");
-const EGLContext = @import("egl.zig").EGLContext;
-const JNI = @import("jni.zig").JNI;
-
-const android = @import("android-support.zig");
-const build_options = @import("build_options");
+const android = @import("android");
 
 pub const panic = android.panic;
 pub const log = android.log;
+
+const EGLContext = android.egl.EGLContext;
+const JNI = android.JNI;
+const c = android.egl.c;
 
 const app_log = std.log.scoped(.app);
 
@@ -29,14 +28,14 @@ pub const AndroidApp = struct {
     allocator: *std.mem.Allocator,
     activity: *android.ANativeActivity,
 
-    thread: ?*std.Thread = null,
+    thread: ?std.Thread = null,
     running: bool = true,
 
-    egl_lock: std.Mutex = std.Mutex{},
+    egl_lock: std.Thread.Mutex = .{},
     egl: ?EGLContext = null,
     egl_init: bool = true,
 
-    input_lock: std.Mutex = std.Mutex{},
+    input_lock: std.Thread.Mutex = .{},
     input: ?*android.AInputQueue = null,
 
     config: ?*android.AConfiguration = null,
@@ -48,16 +47,9 @@ pub const AndroidApp = struct {
     /// This is the entry point which initializes a application
     /// that has stored its previous state.
     /// `stored_state` is that state, the memory is only valid for this function.
-    pub fn initRestore(allocator: *std.mem.Allocator, activity: *android.ANativeActivity, stored_state: []const u8) !Self {
-        return Self{
-            .allocator = allocator,
-            .activity = activity,
-        };
-    }
+    pub fn init(allocator: *std.mem.Allocator, activity: *android.ANativeActivity, stored_state: ?[]const u8) !Self {
+        _ = stored_state;
 
-    /// This is the entry point which initializes a application
-    /// that has no previous state.
-    pub fn initFresh(allocator: *std.mem.Allocator, activity: *android.ANativeActivity) !Self {
         return Self{
             .allocator = allocator,
             .activity = activity,
@@ -76,7 +68,7 @@ pub const AndroidApp = struct {
         //     // Must be called from main thread…
         //     _ = jni.AndroidMakeFullscreen();
         // }
-        self.thread = try std.Thread.spawn(self, mainLoop);
+        self.thread = try std.Thread.spawn(.{}, mainLoop, .{self});
     }
 
     /// Uninitialize the application.
@@ -84,7 +76,7 @@ pub const AndroidApp = struct {
     pub fn deinit(self: *Self) void {
         @atomicStore(bool, &self.running, false, .SeqCst);
         if (self.thread) |thread| {
-            thread.wait();
+            thread.join();
             self.thread = null;
         }
         if (self.config) |config| {
@@ -104,7 +96,7 @@ pub const AndroidApp = struct {
         self.screen_width = @intToFloat(f32, android.ANativeWindow_getWidth(window));
         self.screen_height = @intToFloat(f32, android.ANativeWindow_getHeight(window));
 
-        self.egl = EGLContext.init(window) catch |err| blk: {
+        self.egl = EGLContext.init(window, .gles2) catch |err| blk: {
             app_log.err("Failed to initialize EGL for window: {}\n", .{err});
             break :blk null;
         };
@@ -112,6 +104,7 @@ pub const AndroidApp = struct {
     }
 
     pub fn onNativeWindowDestroyed(self: *Self, window: *android.ANativeWindow) void {
+        _ = window;
         var held = self.egl_lock.acquire();
         defer held.release();
 
@@ -129,6 +122,8 @@ pub const AndroidApp = struct {
     }
 
     pub fn onInputQueueDestroyed(self: *Self, input: *android.AInputQueue) void {
+        _ = input;
+
         var held = self.input_lock.acquire();
         defer held.release();
 
@@ -145,8 +140,8 @@ pub const AndroidApp = struct {
         app_log.debug(
             \\MCC:         {}
             \\MNC:         {}
-            \\Language:    {}
-            \\Country:     {}
+            \\Language:    {s}
+            \\Country:     {s}
             \\Orientation: {}
             \\Touchscreen: {}
             \\Density:     {}
@@ -216,7 +211,7 @@ pub const AndroidApp = struct {
             var len = std.unicode.utf8Encode(codepoint, &buf) catch 0;
             var key_text = buf[0..len];
 
-            std.log.scoped(.input).info("Pressed key: '{}' U+{X}", .{ key_text, codepoint });
+            std.log.scoped(.input).info("Pressed key: '{s}' U+{X}", .{ key_text, codepoint });
         }
 
         return false;
@@ -628,7 +623,7 @@ const Vector4 = extern struct {
     }
 };
 
-const mesh = comptime blk: {
+const mesh = blk: {
     const stl_data = @embedFile("logo.stl");
 
     const count = std.mem.readIntLittle(u32, stl_data[80..][0..4]);
