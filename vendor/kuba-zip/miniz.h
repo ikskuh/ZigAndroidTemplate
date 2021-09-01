@@ -4154,8 +4154,14 @@ static FILE *mz_freopen(const char *pPath, const char *pMode, FILE *pStream) {
 #define MZ_FCLOSE fclose
 #define MZ_FREAD fread
 #define MZ_FWRITE fwrite
+// ZIG_ANDROID_MOD: Zig's mingw64 doesn't have _ftelli64/_fseeki64
+#if defined(__MINGW64__)
+#define MZ_FTELL64 ftello
+#define MZ_FSEEK64 fseeko
+#else
 #define MZ_FTELL64 _ftelli64
 #define MZ_FSEEK64 _fseeki64
+#endif
 #define MZ_FILE_STAT_STRUCT _stat
 #define MZ_FILE_STAT _stat
 #define MZ_FFLUSH fflush
