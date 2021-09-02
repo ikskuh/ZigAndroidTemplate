@@ -656,7 +656,7 @@ pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []cons
     const unpack_apk = sdk.b.addSystemCommand(&[_][]const u8{
         "unzip",
         "-o",
-        b.pathFromRoot(input_apk_file),
+        sdk.builder.pathFromRoot(input_apk_file),
         "-d",
         temp_folder,
     });
@@ -665,7 +665,7 @@ pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []cons
     const repack_apk = sdk.b.addSystemCommand(&[_][]const u8{
         "zip",
         "-D9r",
-        b.pathFromRoot(output_apk_file),
+        sdk.builder.pathFromRoot(output_apk_file),
         ".",
     });
     repack_apk.cwd = temp_folder;
@@ -703,8 +703,8 @@ pub fn alignApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []const u
         sdk.system_tools.zipalign,
         "-v",
         "4",
-        b.pathFromRoot(input_apk_file),
-        b.pathFromRoot(output_apk_file),
+        sdk.builder.pathFromRoot(input_apk_file),
+        sdk.builder.pathFromRoot(output_apk_file),
     });
     return &step.step;
 }
