@@ -1,5 +1,7 @@
 # Android Apps in Zig
 
+![Project banner](design/logo.png)
+
 This repository contains a example on how to create a minimal Android app in Zig.
 
 ## State of the project
