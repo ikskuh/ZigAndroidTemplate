@@ -2105,12 +2105,10 @@ pub const __SIZEOF_WINT_T__ = 4;
 pub const __SIZEOF_INT128__ = 16;
 pub const __INTMAX_FMTd__ = "ld";
 pub const __INTMAX_FMTi__ = "li";
-pub const __INTMAX_C_SUFFIX__ = L;
 pub const __UINTMAX_FMTo__ = "lo";
 pub const __UINTMAX_FMTu__ = "lu";
 pub const __UINTMAX_FMTx__ = "lx";
 pub const __UINTMAX_FMTX__ = "lX";
-pub const __UINTMAX_C_SUFFIX__ = UL;
 pub const __INTMAX_WIDTH__ = 64;
 pub const __PTRDIFF_FMTd__ = "ld";
 pub const __PTRDIFF_FMTi__ = "li";
@@ -2200,7 +2198,6 @@ pub const __INT32_FMTd__ = "d";
 pub const __INT32_FMTi__ = "i";
 pub const __INT64_FMTd__ = "ld";
 pub const __INT64_FMTi__ = "li";
-pub const __INT64_C_SUFFIX__ = L;
 pub const __UINT8_FMTo__ = "hho";
 pub const __UINT8_FMTu__ = "hhu";
 pub const __UINT8_FMTx__ = "hhx";
@@ -2217,14 +2214,12 @@ pub const __UINT32_FMTo__ = "o";
 pub const __UINT32_FMTu__ = "u";
 pub const __UINT32_FMTx__ = "x";
 pub const __UINT32_FMTX__ = "X";
-pub const __UINT32_C_SUFFIX__ = U;
 pub const __UINT32_MAX__ = @as(c_uint, 4294967295);
 pub const __INT32_MAX__ = 2147483647;
 pub const __UINT64_FMTo__ = "lo";
 pub const __UINT64_FMTu__ = "lu";
 pub const __UINT64_FMTx__ = "lx";
 pub const __UINT64_FMTX__ = "lX";
-pub const __UINT64_C_SUFFIX__ = UL;
 pub const __UINT64_MAX__ = @as(c_ulong, 18446744073709551615);
 pub const __INT64_MAX__ = @as(c_long, 9223372036854775807);
 pub const __INT_LEAST8_MAX__ = 127;
@@ -2369,21 +2364,7 @@ pub const _DEBUG = 1;
 pub const ANDROID = 1;
 pub const APPNAME = "ziggy";
 pub const DANDROIDVERSION = 29;
-pub inline fn va_start(ap: anytype, param: anytype) @TypeOf(__builtin_va_start(ap, param)) {
-    return __builtin_va_start(ap, param);
-}
-pub inline fn va_end(ap: anytype) @TypeOf(__builtin_va_end(ap)) {
-    return __builtin_va_end(ap);
-}
-pub inline fn va_arg(ap: anytype, type_1: anytype) @TypeOf(__builtin_va_arg(ap, type_1)) {
-    return __builtin_va_arg(ap, type_1);
-}
-pub inline fn __va_copy(d: anytype, s: anytype) @TypeOf(__builtin_va_copy(d, s)) {
-    return __builtin_va_copy(d, s);
-}
-pub inline fn va_copy(dest: anytype, src: anytype) @TypeOf(__builtin_va_copy(dest, src)) {
-    return __builtin_va_copy(dest, src);
-}
+
 pub const __GNUC_VA_LIST = 1;
 pub const __BIONIC__ = 1;
 pub inline fn __BIONIC_CAST(_: anytype, _t: anytype, _v: anytype) @TypeOf((@import("std").meta.cast(_t, _v))) {
@@ -2395,100 +2376,9 @@ pub inline fn __BIONIC_ALIGN(__value: anytype, __alignment: anytype) @TypeOf((__
 pub inline fn __P(protos: anytype) @TypeOf(protos) {
     return protos;
 }
-pub inline fn __CONCAT(x: anytype, y: anytype) @TypeOf(__CONCAT1(x, y)) {
-    return __CONCAT1(x, y);
-}
-pub inline fn ___CONCAT(x: anytype, y: anytype) @TypeOf(__CONCAT(x, y)) {
-    return __CONCAT(x, y);
-}
-pub inline fn ___STRING(x: anytype) @TypeOf(__STRING(x)) {
-    return __STRING(x);
-}
-pub const __always_inline = __attribute__(__always_inline__);
-pub const __attribute_const__ = __attribute__(__const__);
-pub const __attribute_pure__ = __attribute__(__pure__);
-pub const __dead = __attribute__(__noreturn__);
-pub const __noreturn = __attribute__(__noreturn__);
-pub const __mallocfunc = __attribute__(__malloc__);
-pub const __packed = __attribute__(__packed__);
-pub const __returns_twice = __attribute__(__returns_twice__);
-pub const __unused = __attribute__(__unused__);
-pub const __used = __attribute__(__used__);
-pub inline fn __printflike(x: anytype, y: anytype) @TypeOf(__attribute__(__format__(printf, x, y))) {
-    return __attribute__(__format__(printf, x, y));
-}
-pub inline fn __scanflike(x: anytype, y: anytype) @TypeOf(__attribute__(__format__(scanf, x, y))) {
-    return __attribute__(__format__(scanf, x, y));
-}
-pub inline fn __strftimelike(x: anytype) @TypeOf(__attribute__(__format__(strftime, x, 0))) {
-    return __attribute__(__format__(strftime, x, 0));
-}
-pub inline fn __predict_true(exp: anytype) @TypeOf(__builtin_expect(exp != 0, 1)) {
-    return __builtin_expect(exp != 0, 1);
-}
-pub inline fn __predict_false(exp: anytype) @TypeOf(__builtin_expect(exp != 0, 0)) {
-    return __builtin_expect(exp != 0, 0);
-}
-pub const __wur = __attribute__(__warn_unused_result__);
-pub inline fn __errorattr(msg: anytype) @TypeOf(__attribute__(unavailable(msg))) {
-    return __attribute__(unavailable(msg));
-}
-pub inline fn __warnattr(msg: anytype) @TypeOf(__attribute__(deprecated(msg))) {
-    return __attribute__(deprecated(msg));
-}
-pub inline fn __warnattr_real(msg: anytype) @TypeOf(__attribute__(deprecated(msg))) {
-    return __attribute__(deprecated(msg));
-}
-pub inline fn __enable_if(cond: anytype, msg: anytype) @TypeOf(__attribute__(enable_if(cond, msg))) {
-    return __attribute__(enable_if(cond, msg));
-}
-pub inline fn __clang_error_if(cond: anytype, msg: anytype) @TypeOf(__attribute__(diagnose_if(cond, msg, "error"))) {
-    return __attribute__(diagnose_if(cond, msg, "error"));
-}
-pub inline fn __clang_warning_if(cond: anytype, msg: anytype) @TypeOf(__attribute__(diagnose_if(cond, msg, "warning"))) {
-    return __attribute__(diagnose_if(cond, msg, "warning"));
-}
-pub inline fn __RENAME_LDBL(_: anytype, rewrite_api_level: anytype, regular_api_level: anytype) @TypeOf(__INTRODUCED_IN(regular_api_level)) {
-    _ = rewrite_api_level;
-    return __INTRODUCED_IN(regular_api_level);
-}
-pub inline fn __RENAME_STAT64(_: anytype, rewrite_api_level: anytype, regular_api_level: anytype) @TypeOf(__INTRODUCED_IN(regular_api_level)) {
-    _ = rewrite_api_level;
-    return __INTRODUCED_IN(regular_api_level);
-}
+
 pub const __WORDSIZE = 64;
-pub const __BIONIC_FORTIFY_UNKNOWN_SIZE = size_t - 1;
 pub const __bos_level = 0;
-pub inline fn __bosn(s: anytype, n: anytype) @TypeOf(__builtin_object_size(s, n)) {
-    return __builtin_object_size(s, n);
-}
-pub inline fn __bos(s: anytype) @TypeOf(__bosn(s, __bos_level)) {
-    return __bosn(s, __bos_level);
-}
-pub const __pass_object_size = __pass_object_size_n(__bos_level);
-pub const __pass_object_size0 = __pass_object_size_n(0);
-pub inline fn __bos_unevaluated_lt(bos_val: anytype, val: anytype) @TypeOf(bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val < val))) {
-    return bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val < val));
-}
-pub inline fn __bos_unevaluated_le(bos_val: anytype, val: anytype) @TypeOf(bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val <= val))) {
-    return bos_val != @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) and (bos_val <= val));
-}
-pub inline fn __bos_dynamic_check_impl_and(bos_val: anytype, op: anytype, index: anytype, cond: anytype) @TypeOf(bos_val == @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) or ((__builtin_constant_p(index) != 0) and (bos_val ++ (op ++ @boolToInt((index != 0) and (cond != 0))) != 0)))) {
-    return bos_val == @boolToInt((__BIONIC_FORTIFY_UNKNOWN_SIZE != 0) or ((__builtin_constant_p(index) != 0) and (bos_val ++ (op ++ @boolToInt((index != 0) and (cond != 0))) != 0)));
-}
-pub inline fn __bos_dynamic_check_impl(bos_val: anytype, op: anytype, index: anytype) @TypeOf(__bos_dynamic_check_impl_and(bos_val, op, index, 1)) {
-    return __bos_dynamic_check_impl_and(bos_val, op, index, 1);
-}
-pub const __overloadable = __attribute__(overloadable);
-pub const __LIBC_HIDDEN__ = __attribute__(visibility("hidden"));
-pub const __LIBC32_LEGACY_PUBLIC__ = __attribute__(visibility("hidden"));
-pub inline fn __size_mul_overflow(a: anytype, b: anytype, result: anytype) @TypeOf(__builtin_umull_overflow(a, b, result)) {
-    return __builtin_umull_overflow(a, b, result);
-}
-pub inline fn __unsafe_check_mul_overflow(x: anytype, y: anytype) @TypeOf(__SIZE_TYPE__ - (1 / @boolToInt(x < y))) {
-    return __SIZE_TYPE__ - (1 / @boolToInt(x < y));
-}
-pub const __VERSIONER_NO_GUARD = __attribute__(annotate("versioner_no_guard"));
 pub const __ANDROID_API_FUTURE__ = 10000;
 pub const __ANDROID_API__ = __ANDROID_API_FUTURE__;
 pub const __ANDROID_API_G__ = 9;
@@ -2513,89 +2403,10 @@ pub const __NDK_BETA__ = 0;
 pub const __NDK_BUILD__ = 6352462;
 pub const __NDK_CANARY__ = 0;
 pub const NULL = (@import("std").meta.cast(?*c_void, 0));
-pub inline fn offsetof(t: anytype, d: anytype) @TypeOf(__builtin_offsetof(t, d)) {
-    return __builtin_offsetof(t, d);
-}
+
 pub const WCHAR_MAX = __WCHAR_MAX__;
 pub const WCHAR_MIN = '\x00';
-pub inline fn INT8_C(c: anytype) @TypeOf(c) {
-    return c;
-}
-pub inline fn INT_LEAST8_C(c: anytype) @TypeOf(INT8_C(c)) {
-    return INT8_C(c);
-}
-pub inline fn INT_FAST8_C(c: anytype) @TypeOf(INT8_C(c)) {
-    return INT8_C(c);
-}
-pub inline fn UINT8_C(c: anytype) @TypeOf(c) {
-    return c;
-}
-pub inline fn UINT_LEAST8_C(c: anytype) @TypeOf(UINT8_C(c)) {
-    return UINT8_C(c);
-}
-pub inline fn UINT_FAST8_C(c: anytype) @TypeOf(UINT8_C(c)) {
-    return UINT8_C(c);
-}
-pub inline fn INT16_C(c: anytype) @TypeOf(c) {
-    return c;
-}
-pub inline fn INT_LEAST16_C(c: anytype) @TypeOf(INT16_C(c)) {
-    return INT16_C(c);
-}
-pub inline fn INT_FAST16_C(c: anytype) @TypeOf(INT32_C(c)) {
-    return INT32_C(c);
-}
-pub inline fn UINT16_C(c: anytype) @TypeOf(c) {
-    return c;
-}
-pub inline fn UINT_LEAST16_C(c: anytype) @TypeOf(UINT16_C(c)) {
-    return UINT16_C(c);
-}
-pub inline fn UINT_FAST16_C(c: anytype) @TypeOf(UINT32_C(c)) {
-    return UINT32_C(c);
-}
-pub inline fn INT32_C(c: anytype) @TypeOf(c) {
-    return c;
-}
-pub inline fn INT_LEAST32_C(c: anytype) @TypeOf(INT32_C(c)) {
-    return INT32_C(c);
-}
-pub inline fn INT_FAST32_C(c: anytype) @TypeOf(INT32_C(c)) {
-    return INT32_C(c);
-}
-pub inline fn UINT_LEAST32_C(c: anytype) @TypeOf(UINT32_C(c)) {
-    return UINT32_C(c);
-}
-pub inline fn UINT_FAST32_C(c: anytype) @TypeOf(UINT32_C(c)) {
-    return UINT32_C(c);
-}
-pub inline fn INT_LEAST64_C(c: anytype) @TypeOf(INT64_C(c)) {
-    return INT64_C(c);
-}
-pub inline fn INT_FAST64_C(c: anytype) @TypeOf(INT64_C(c)) {
-    return INT64_C(c);
-}
-pub inline fn UINT_LEAST64_C(c: anytype) @TypeOf(UINT64_C(c)) {
-    return UINT64_C(c);
-}
-pub inline fn UINT_FAST64_C(c: anytype) @TypeOf(UINT64_C(c)) {
-    return UINT64_C(c);
-}
-pub inline fn INTMAX_C(c: anytype) @TypeOf(INT64_C(c)) {
-    return INT64_C(c);
-}
-pub inline fn UINTMAX_C(c: anytype) @TypeOf(UINT64_C(c)) {
-    return UINT64_C(c);
-}
-pub inline fn INTPTR_C(c: anytype) @TypeOf(INT64_C(c)) {
-    return INT64_C(c);
-}
-pub inline fn UINTPTR_C(c: anytype) @TypeOf(UINT64_C(c)) {
-    return UINT64_C(c);
-}
-pub inline fn PTRDIFF_C(c: anytype) @TypeOf(INT64_C(c)) {
-    return INT64_C(c);
-}
+
 pub const INT8_MIN = -128;
 pub const INT8_MAX = 127;
 pub const INT_LEAST8_MIN = INT8_MIN;
@@ -2621,37 +2432,9 @@ pub const INT_LEAST32_MAX = INT32_MAX;
 pub const INT_FAST32_MIN = INT32_MIN;
 pub const INT_FAST32_MAX = INT32_MAX;
 pub const UINT32_MAX = @as(c_uint, 4294967295);
-pub const UINT_LEAST32_MAX = UINT32_MAX;
-pub const UINT_FAST32_MAX = UINT32_MAX;
-pub const INT64_MIN = INT64_C(-9223372036854775807) - 1;
-pub const INT64_MAX = INT64_C(9223372036854775807);
-pub const INT_LEAST64_MIN = INT64_MIN;
-pub const INT_LEAST64_MAX = INT64_MAX;
-pub const INT_FAST64_MIN = INT64_MIN;
-pub const INT_FAST64_MAX = INT64_MAX;
-pub const UINT64_MAX = UINT64_C(18446744073709551615);
-pub const UINT_LEAST64_MAX = UINT64_MAX;
-pub const UINT_FAST64_MAX = UINT64_MAX;
-pub const INTMAX_MIN = INT64_MIN;
-pub const INTMAX_MAX = INT64_MAX;
-pub const UINTMAX_MAX = UINT64_MAX;
-pub const SIG_ATOMIC_MAX = INT32_MAX;
-pub const SIG_ATOMIC_MIN = INT32_MIN;
-pub const WINT_MAX = UINT32_MAX;
-pub const WINT_MIN = 0;
-pub const INTPTR_MIN = INT64_MIN;
-pub const INTPTR_MAX = INT64_MAX;
-pub const UINTPTR_MAX = UINT64_MAX;
-pub const PTRDIFF_MIN = INT64_MIN;
-pub const PTRDIFF_MAX = INT64_MAX;
-pub const SIZE_MAX = UINT64_MAX;
+
 pub const __BITS_PER_LONG = 64;
 pub const __FD_SETSIZE = 1024;
-pub const __bitwise = __bitwise__;
-pub const __aligned_u64 = __u64 ++ __attribute__(aligned(8));
-pub const __aligned_be64 = __be64 ++ __attribute__(aligned(8));
-pub const __aligned_le64 = __le64 ++ __attribute__(aligned(8));
-pub const JNIEXPORT = __attribute__(visibility("default"));
 pub const JNI_FALSE = 0;
 pub const JNI_TRUE = 1;
 pub const JNI_VERSION_1_1 = 0x00010001;

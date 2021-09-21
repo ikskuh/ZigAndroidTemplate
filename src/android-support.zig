@@ -173,7 +173,7 @@ fn makeNativeActivityGlue(comptime App: type) android.ANativeActivityCallbacks {
                     switch (@typeInfo(@TypeOf(result))) {
                         .ErrorUnion => result catch |err| app_log.emerg("{s} returned error {s}", .{ func, @errorName(err) }),
                         .Void => {},
-                        .ErrorSet => app_log.emerg("{s} returned error {s}", .{ func, @errorName(err) }),
+                        .ErrorSet => app_log.emerg("{s} returned error {s}", .{ func, @errorName(result) }),
                         else => @compileError("callback must return void!"),
                     }
                 }
