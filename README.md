@@ -11,6 +11,10 @@ The code contains some commented examples on how to interface with the JNI to us
 
 It has no dependencies to C code except for the android libraries, so it can be considered a pure Zig app.
 
+We're running a CI that will verify the build for Windows, macOS and Linux:
+
+[![CI](https://github.com/MasterQ32/ZigAndroidTemplate/actions/workflows/main-ci.yml/badge.svg)](https://github.com/MasterQ32/ZigAndroidTemplate/actions/workflows/main-ci.yml)
+
 ## Presentation
 
 There is a [FOSDEM Talk](https://fosdem.org/2021/schedule/event/zig_android/) you can watch here:
@@ -34,6 +38,19 @@ Now you need to generate yourself a keystore to sign your apps. For debugging pu
 If all of the above is done, you should be able to build the app by running `zig build`.
 
 There are convenience options with `zig build push` (installs the app on a connected phone) and `zig build run` (which installs, then runs the app).
+
+### Quick Start
+
+Install the [`sdkmanager`](https://developer.android.com/studio/command-line/sdkmanager) and invoke the following command line:
+
+```
+sdkmanager --install "platforms;android-28"
+sdkmanager --install "build-tools;28.0.3"
+sdkmanager --install "ndk;21.1.6352462"
+zig build keystore install run
+```
+
+This should build an APK and install it on your connected phone if possible.
 
 ## Getting started
 
