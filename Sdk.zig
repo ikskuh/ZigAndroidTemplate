@@ -3,6 +3,7 @@
 //! - `adb` from the Android tools package
 
 const std = @import("std");
+const builtin = @import("builtin");
 
 const auto_detect = @import("build/auto-detect.zig");
 
@@ -36,7 +37,7 @@ pub fn init(b: *Builder, user_config: ?UserConfig, versions: ToolchainVersions) 
     const actual_user_config = user_config orelse auto_detect.findUserConfig(b, versions) catch |err| @panic(@errorName(err));
 
     const system_tools = blk: {
-        const exe = if (std.builtin.os.tag == .windows) ".exe" else "";
+        const exe = if (builtin.os.tag == .windows) ".exe" else "";
 
         const zipalign = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", versions.build_tools_version, "zipalign" ++ exe }) catch unreachable;
         const aapt = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", versions.build_tools_version, "aapt" ++ exe }) catch unreachable;
