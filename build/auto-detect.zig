@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const Builder = std.build.Builder;
 const Allocator = std.mem.Allocator;
 
@@ -94,7 +95,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
     // On windows, check for an android studio install.
     // If it's present, it may have the sdk path stored in the registry.
     // If not, check the default install location.
-    if (std.builtin.os.tag == .windows) {
+    if (builtin.os.tag == .windows) {
         const HKEY = ?*opaque {};
         const LSTATUS = u32;
         const DWORD = u32;
@@ -362,7 +363,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         }
         if (config.java_home.len == 0) {
             print("Java JDK is missing. Edit the config file, or set JAVA_HOME to your JDK install.\n", .{});
-            if (std.builtin.os.tag == .windows) {
+            if (builtin.os.tag == .windows) {
                 print("Installing Android Studio will also install a suitable JDK.\n", .{});
             }
             print("\n", .{});
@@ -379,7 +380,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
 }
 
 fn findProgramPath(allocator: *Allocator, program: []const u8) ?[]const u8 {
-    const args: []const []const u8 = if (std.builtin.os.tag == .windows)
+    const args: []const []const u8 = if (builtin.os.tag == .windows)
         &[_][]const u8{ "where", program }
     else
         &[_][]const u8{ "which", program };
@@ -477,7 +478,7 @@ fn findProblemWithJdk(b: *Builder, path: []const u8) ?[]const u8 {
         return b.fmt("Cannot access {s}, {s}", .{ path, @errorName(err) });
     };
 
-    const target_executable = if (std.builtin.os.tag == .windows) "bin\\jarsigner.exe" else "bin/jarsigner";
+    const target_executable = if (builtin.os.tag == .windows) "bin\\jarsigner.exe" else "bin/jarsigner";
     const target_path = pathConcat(b, path, target_executable);
     std.fs.cwd().access(target_path, .{}) catch |err| {
         return b.fmt("Cannot access jarsigner, {s}", .{@errorName(err)});
