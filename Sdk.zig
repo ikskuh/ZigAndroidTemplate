@@ -535,7 +535,7 @@ const CopyToZipStep = struct {
 /// Compiles a single .so file for the given platform.
 /// Note that this function assumes your build script only uses a single `android_config`!
 pub fn compileAppLibrary(
-    sdk: Sdk,
+    sdk: *const Sdk,
     src_file: []const u8,
     app_config: AppConfig,
     mode: std.builtin.Mode,
@@ -608,35 +608,25 @@ pub fn compileAppLibrary(
         sdk.versions.android_sdk_version,
     });
 
-    const libc_path = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{
-        sdk.b.cache_root,
-        "android-libc",
-        sdk.b.fmt("android-{d}-{s}.conf", .{ sdk.versions.android_sdk_version, config.out_dir }),
-    }) catch unreachable;
-
     const lib_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ lib_dir_root, config.lib_dir }) catch unreachable;
 
     exe.setTarget(config.target);
     exe.addLibPath(lib_dir);
     exe.addIncludeDir(std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable);
 
-    exe.libc_file = std.build.FileSource{ .path = libc_path };
-
-    // write libc file:
-    createLibCFile(exe.libc_file.?.path, include_dir, include_dir, lib_dir) catch unreachable;
+    exe.setLibCFile(sdk.createLibCFile(config.out_dir, include_dir, include_dir, lib_dir) catch unreachable);
+    exe.libc_file.?.addStepDependencies(&exe.step);
 
     return exe;
 }
 
-fn createLibCFile(path: []const u8, include_dir: []const u8, sys_include_dir: []const u8, crt_dir: []const u8) !void {
-    if (std.fs.path.dirname(path)) |dir| {
-        try std.fs.cwd().makePath(dir);
-    }
+fn createLibCFile(sdk: *const Sdk, folder_name: []const u8, include_dir: []const u8, sys_include_dir: []const u8, crt_dir: []const u8) !std.build.FileSource {
+    const fname = sdk.b.fmt("android-{d}-{s}.conf", .{ sdk.versions.android_sdk_version, folder_name });
 
-    var f = try std.fs.cwd().createFile(path, .{});
-    defer f.close();
+    var contents = std.ArrayList(u8).init(sdk.b.allocator);
+    errdefer contents.deinit();
 
-    var writer = f.writer();
+    var writer = contents.writer();
 
     try writer.print("include_dir={s}\n", .{include_dir});
     try writer.print("sys_include_dir={s}\n", .{sys_include_dir});
@@ -644,6 +634,9 @@ fn createLibCFile(path: []const u8, include_dir: []const u8, sys_include_dir: []
     try writer.writeAll("msvc_lib_dir=\n");
     try writer.writeAll("kernel32_lib_dir=\n");
     try writer.writeAll("gcc_dir=\n");
+
+    const step = sdk.b.addWriteFile(fname, contents.items);
+    return step.getFileSource(fname) orelse unreachable;
 }
 
 pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []const u8) *Step {
