@@ -552,6 +552,8 @@ pub fn compileAppLibrary(
 
     const exe = sdk.b.addSharedLibrary(app_config.app_name, src_file, .unversioned);
 
+    exe.link_emit_relocs = true;
+    exe.link_eh_frame_hdr = true;
     exe.force_pic = true;
     exe.link_function_sections = true;
     exe.bundle_compiler_rt = true;

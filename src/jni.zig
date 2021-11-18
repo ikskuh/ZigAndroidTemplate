@@ -206,7 +206,7 @@ pub const JNI = struct {
         self.invokeJni(.CallVoidMethod, .{ self.activity.clazz, MethodrequestPermissions, perm_array, @as(c_int, 0) });
     }
 
-    pub fn getFilesDir(self: *Self, allocator: *std.mem.Allocator) ![]const u8 {
+    pub fn getFilesDir(self: *Self, allocator: *std.mem.Allocator) ![:0]const u8 {
         const getFilesDirMethod = self.invokeJni(.GetMethodID, .{ self.activity_class, "getFilesDir", "()Ljava/io/File;" });
 
         const files_dir = self.env.*.CallObjectMethod(self.env, self.activity.clazz, getFilesDirMethod);
@@ -224,7 +224,7 @@ pub const JNI = struct {
 
             const utf8 = std.mem.sliceTo(utf8_ptr, 0);
 
-            return try allocator.dupe(u8, utf8);
+            return try allocator.dupeZ(u8, utf8);
         } else {
             return error.OutOfMemory;
         }

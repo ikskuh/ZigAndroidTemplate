@@ -73,46 +73,6 @@ export fn __errno_location() *c_int {
     return &errno;
 }
 
-const PanicWriter = struct {
-    const Error = error{LineTooLong};
-    line_buffer: [8192]u8 = undefined,
-    line_len: usize = 0,
-
-    const Writer = std.io.Writer(*PanicWriter, Error, write);
-
-    fn write(self: *PanicWriter, buffer: []const u8) !usize {
-        for (buffer) |char| {
-            switch (char) {
-                '\n' => {
-                    std.log.emerg("{s}", .{self.line_buffer[0..self.line_len]});
-                    self.line_len = 0;
-                },
-                else => {
-                    if (self.line_len >= self.line_buffer.len) {
-                        std.log.info("line too long: {} + {}", .{ self.line_len, buffer.len });
-                        // std.log.emerg("{s}", .{self.line_buffer[0..self.line_len]});
-                        self.line_len = 0;
-                        return error.LineTooLong;
-                    }
-                    self.line_buffer[self.line_len] = char;
-                    self.line_len += 1;
-                },
-            }
-        }
-        return buffer.len;
-    }
-
-    fn flush(self: *PanicWriter) !void {
-        if (self.line_len > 0) {
-            self.write("\n");
-        }
-    }
-
-    fn writer(self: *PanicWriter) Writer {
-        return Writer{ .context = self };
-    }
-};
-
 var recursive_panic = false;
 
 // Android Panic implementation
@@ -130,17 +90,33 @@ pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noretur
 
     logger.writer().print("PANIC: {s}\n", .{message}) catch {};
 
-    if (stack_trace) |st| {
-        logger.writer().print("{}\n", .{st}) catch {};
+    const maybe_debug_info = std.debug.getSelfDebugInfo() catch null;
+
+    //    dumpStackTrace(maybe_debug_info);
+
+    {
+        var count: usize = 0;
+        var it = std.debug.StackIterator.init(null, null);
+        while (it.next()) |return_address| {
+            printSymbolInfoAt(count, maybe_debug_info, return_address);
+            count += 1;
+        }
     }
 
-    if (std.debug.getSelfDebugInfo()) |debug_info| {
-        std.debug.writeCurrentStackTrace(logger.writer(), debug_info, .no_color, null) catch |err| {
-            logger.writer().print("failed to write stack trace: {s}\n", .{err}) catch {};
-        };
-    } else |err| {
-        logger.writer().print("failed to get debug info: {s}\n", .{err}) catch {};
-    }
+    _ = stack_trace;
+    // if (stack_trace) |st| {
+    //     logger.writer().print("{}\n", .{st}) catch {};
+    // }
+
+    // if (std.debug.getSelfDebugInfo()) |debug_info| {
+    // std.debug.writeCurrentStackTrace(logger.writer(), debug_info, .no_color, null) catch |err| {
+    //     logger.writer().print("failed to write stack trace: {s}\n", .{err}) catch {};
+    // };
+    // } else |err| {
+    //     logger.writer().print("failed to get debug info: {s}\n", .{err}) catch {};
+    // }
+
+    logger.writer().writeAll("<-- end of stack trace -->\n") catch {};
 
     std.os.exit(1);
 }
@@ -205,46 +181,20 @@ pub fn log(
     comptime format: []const u8,
     args: anytype,
 ) void {
-    // var buffer: [8192]u8 = undefined;
-    // const msg = std.fmt.bufPrint(&buffer, "{s}: " ++ format ++ "\x00", .{@tagName(scope)} ++ args) catch {
-    //     // TODO: Handle missing format here…
-    //     return;
-    // };
+    const level = switch (message_level) {
+        //  => .ANDROID_LOG_VERBOSE,
+        .debug => android.ANDROID_LOG_DEBUG,
+        .info => android.ANDROID_LOG_INFO,
+        .warn => android.ANDROID_LOG_WARN,
+        .err => android.ANDROID_LOG_ERROR,
+    };
 
-    // // Make slice 0-terminated with added nul terminator
-    // const msg0 = msg[0..(msg.len - 1) :0];
+    var logger = LogWriter{
+        .log_level = level,
+    };
+    defer logger.flush();
 
-    // // Using the function from liblog to write to the actual debug output
-    // _ = android.__android_log_write(
-    //     switch (message_level) {
-    //         //  => .ANDROID_LOG_VERBOSE,
-    //         .debug => android.ANDROID_LOG_DEBUG,
-    //         .info => android.ANDROID_LOG_INFO,
-    //         .warn => android.ANDROID_LOG_WARN,
-    //         .err => android.ANDROID_LOG_ERROR,
-    //     },
-    //     build_options.app_name.ptr,
-    //     msg0.ptr,
-    // );
-    {
-        const level = switch (message_level) {
-            //  => .ANDROID_LOG_VERBOSE,
-            .debug => android.ANDROID_LOG_DEBUG,
-            .info => android.ANDROID_LOG_INFO,
-            .warn => android.ANDROID_LOG_WARN,
-            .err => android.ANDROID_LOG_ERROR,
-        };
-
-        var logger = LogWriter{
-            .log_level = level,
-        };
-        defer logger.flush();
-
-        logger.writer().print("{s}: " ++ format, .{@tagName(scope)} ++ args) catch {
-            // TODO: Handle missing format here…
-            return;
-        };
-    }
+    logger.writer().print("{s}: " ++ format, .{@tagName(scope)} ++ args) catch {};
 }
 
 /// Returns a wrapper implementation for the given App type which implements all
@@ -351,5 +301,55 @@ fn makeNativeActivityGlue(comptime App: type) android.ANativeActivityCallbacks {
         .onContentRectChanged = T.onContentRectChanged,
         .onConfigurationChanged = T.onConfigurationChanged,
         .onLowMemory = T.onLowMemory,
+    };
+}
+
+inline fn printSymbolInfoAt(st_index: usize, maybe_debug_info: ?*std.debug.DebugInfo, int_addr: usize) void {
+    var symbol_name_buffer: [1024]u8 = undefined;
+    var symbol_name: ?[]const u8 = null;
+
+    if (maybe_debug_info) |di| {
+        if (di.getModuleForAddress(int_addr)) |module| {
+            if (module.getSymbolAtAddress(int_addr)) |symbol| {
+
+                // symbol_name_buffer
+
+                symbol_name = std.fmt.bufPrint(
+                    &symbol_name_buffer,
+                    "{s} {s} {s}",
+                    .{
+                        symbol.symbol_name,
+                        symbol.compile_unit_name,
+                        fmtMaybeLineInfo(symbol.line_info),
+                    },
+                ) catch symbol_name;
+            } else |_| {}
+        } else |_| {}
+    }
+
+    std.log.info("#{d:0>2}: 0x{X:0>8} {s}", .{
+        st_index,
+        int_addr,
+        symbol_name,
+    });
+}
+
+fn realFmtMaybeLineInfo(self: ?std.debug.LineInfo, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    _ = fmt;
+    _ = options;
+    if (self) |li| {
+        try writer.print("{s}:{d}:{d}", .{
+            li.file_name,
+            li.line,
+            li.column,
+        });
+    } else {
+        try writer.writeAll("<no line info>");
+    }
+}
+
+fn fmtMaybeLineInfo(li: ?std.debug.LineInfo) std.fmt.Formatter(realFmtMaybeLineInfo) {
+    return std.fmt.Formatter(realFmtMaybeLineInfo){
+        .data = li,
     };
 }
