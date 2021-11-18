@@ -59,7 +59,7 @@ pub const JNI = struct {
         return @intCast(u21, unicodeKey);
     }
 
-    fn AndroidMakeFullscreen(self: *Self) void {
+    pub fn AndroidMakeFullscreen(self: *Self) void {
         // Partially based on
         // https://stackoverflow.com/questions/47507714/how-do-i-enable-full-screen-immersive-mode-for-a-native-activity-ndk-app
 
