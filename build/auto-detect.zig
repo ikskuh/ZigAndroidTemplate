@@ -1,7 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const Builder = std.build.Builder;
-const Allocator = std.mem.Allocator;
 
 const Sdk = @import("../Sdk.zig");
 const UserConfig = Sdk.UserConfig;
@@ -129,7 +128,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
             extern "Advapi32" fn RegCloseKey(key: HKEY) LSTATUS;
             extern "Advapi32" fn RegGetValueA(key: HKEY, subKey: ?[*:0]const u8, value: [*:0]const u8, flags: DWORD, type: ?*DWORD, data: ?*c_void, len: ?*DWORD) LSTATUS;
 
-            fn getStringAlloc(allocator: *Allocator, key: HKEY, value: [*:0]const u8) ?[]const u8 {
+            fn getStringAlloc(allocator: std.mem.Allocator, key: HKEY, value: [*:0]const u8) ?[]const u8 {
                 // query the length
                 var len: DWORD = 0;
                 var res = RegGetValueA(key, null, value, RRF_RT_REG_SZ, null, null, &len);
@@ -379,7 +378,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
     return config;
 }
 
-fn findProgramPath(allocator: *Allocator, program: []const u8) ?[]const u8 {
+fn findProgramPath(allocator: std.mem.Allocator, program: []const u8) ?[]const u8 {
     const args: []const []const u8 = if (builtin.os.tag == .windows)
         &[_][]const u8{ "where", program }
     else

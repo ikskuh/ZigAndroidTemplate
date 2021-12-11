@@ -206,7 +206,7 @@ pub const JNI = struct {
         self.invokeJni(.CallVoidMethod, .{ self.activity.clazz, MethodrequestPermissions, perm_array, @as(c_int, 0) });
     }
 
-    pub fn getFilesDir(self: *Self, allocator: *std.mem.Allocator) ![:0]const u8 {
+    pub fn getFilesDir(self: *Self, allocator: std.mem.Allocator) ![:0]const u8 {
         const getFilesDirMethod = self.invokeJni(.GetMethodID, .{ self.activity_class, "getFilesDir", "()Ljava/io/File;" });
 
         const files_dir = self.env.*.CallObjectMethod(self.env, self.activity.clazz, getFilesDirMethod);

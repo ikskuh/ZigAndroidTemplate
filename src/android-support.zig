@@ -36,7 +36,7 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
     });
 
     const app = std.heap.c_allocator.create(AndroidApp) catch {
-        app_log.emerg("Could not create new AndroidApp: OutOfMemory!\n", .{});
+        app_log.err("Could not create new AndroidApp: OutOfMemory!\n", .{});
         return;
     };
 
@@ -50,13 +50,13 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
         else
             null,
     ) catch |err| {
-        std.emerg("Failed to restore app state: {}\n", .{err});
+        std.err("Failed to restore app state: {}\n", .{err});
         std.heap.c_allocator.destroy(app);
         return;
     };
 
     app.start() catch |err| {
-        std.log.emerg("Failed to start app state: {}\n", .{err});
+        std.log.err("Failed to start app state: {}\n", .{err});
         app.deinit();
         std.heap.c_allocator.destroy(app);
         return;

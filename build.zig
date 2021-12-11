@@ -14,7 +14,7 @@ pub fn build(b: *std.build.Builder) !void {
     // Recommendation: Don't hardcore your password here, everyone can read it.
     // At least not for your production keystore ;)
     const key_store = Sdk.KeyStore{
-        .file = "zig-cache/debug.keystore",
+        .file = ".build_config/android.keystore",
         .alias = "default",
         .password = "ziguana",
     };

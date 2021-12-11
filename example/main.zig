@@ -25,7 +25,7 @@ pub const AndroidApp = struct {
         age: i64,
     };
 
-    allocator: *std.mem.Allocator,
+    allocator: std.mem.Allocator,
     activity: *android.ANativeActivity,
 
     thread: ?std.Thread = null,
@@ -47,7 +47,7 @@ pub const AndroidApp = struct {
     /// This is the entry point which initializes a application
     /// that has stored its previous state.
     /// `stored_state` is that state, the memory is only valid for this function.
-    pub fn init(allocator: *std.mem.Allocator, activity: *android.ANativeActivity, stored_state: ?[]const u8) !Self {
+    pub fn init(allocator: std.mem.Allocator, activity: *android.ANativeActivity, stored_state: ?[]const u8) !Self {
         _ = stored_state;
 
         return Self{
@@ -86,8 +86,8 @@ pub const AndroidApp = struct {
     }
 
     pub fn onNativeWindowCreated(self: *Self, window: *android.ANativeWindow) void {
-        var held = self.egl_lock.acquire();
-        defer held.release();
+        self.egl_lock.lock();
+        defer self.egl_lock.unlock();
 
         if (self.egl) |*old| {
             old.deinit();
@@ -105,8 +105,8 @@ pub const AndroidApp = struct {
 
     pub fn onNativeWindowDestroyed(self: *Self, window: *android.ANativeWindow) void {
         _ = window;
-        var held = self.egl_lock.acquire();
-        defer held.release();
+        self.egl_lock.lock();
+        defer self.egl_lock.unlock();
 
         if (self.egl) |*old| {
             old.deinit();
@@ -115,8 +115,8 @@ pub const AndroidApp = struct {
     }
 
     pub fn onInputQueueCreated(self: *Self, input: *android.AInputQueue) void {
-        var held = self.input_lock.acquire();
-        defer held.release();
+        self.input_lock.lock();
+        defer self.input_lock.unlock();
 
         self.input = input;
     }
@@ -124,8 +124,8 @@ pub const AndroidApp = struct {
     pub fn onInputQueueDestroyed(self: *Self, input: *android.AInputQueue) void {
         _ = input;
 
-        var held = self.input_lock.acquire();
-        defer held.release();
+        self.input_lock.lock();
+        defer self.input_lock.unlock();
 
         self.input = null;
     }
@@ -344,7 +344,7 @@ pub const AndroidApp = struct {
 
     fn mainLoop(self: *Self) !void {
         var loop: usize = 0;
-        app_log.notice("mainLoop() started\n", .{});
+        app_log.info("mainLoop() started\n", .{});
 
         self.config = blk: {
             var cfg = android.AConfiguration_new() orelse return error.OutOfMemory;
@@ -372,8 +372,8 @@ pub const AndroidApp = struct {
             // Input process
             {
                 // we lock the handle of our input so we don't have a race condition
-                var held = self.input_lock.acquire();
-                defer held.release();
+                self.input_lock.lock();
+                defer self.input_lock.unlock();
                 if (self.input) |input| {
                     var event: ?*android.AInputEvent = undefined;
                     while (android.AInputQueue_getEvent(input, &event) >= 0) {
@@ -402,8 +402,8 @@ pub const AndroidApp = struct {
             // Render process
             {
                 // same for the EGL context
-                var held = self.egl_lock.acquire();
-                defer held.release();
+                self.egl_lock.lock();
+                defer self.egl_lock.unlock();
                 if (self.egl) |egl| {
                     try egl.makeCurrent();
 
@@ -598,7 +598,7 @@ pub const AndroidApp = struct {
 
             std.time.sleep(10 * std.time.ns_per_ms);
         }
-        app_log.notice("mainLoop() finished\n", .{});
+        app_log.info("mainLoop() finished\n", .{});
     }
 };
 
