@@ -126,7 +126,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         const reg = struct {
             extern "Advapi32" fn RegOpenKeyA(key: HKEY, subKey: [*:0]const u8, result: *HKEY) LSTATUS;
             extern "Advapi32" fn RegCloseKey(key: HKEY) LSTATUS;
-            extern "Advapi32" fn RegGetValueA(key: HKEY, subKey: ?[*:0]const u8, value: [*:0]const u8, flags: DWORD, type: ?*DWORD, data: ?*c_void, len: ?*DWORD) LSTATUS;
+            extern "Advapi32" fn RegGetValueA(key: HKEY, subKey: ?[*:0]const u8, value: [*:0]const u8, flags: DWORD, type: ?*DWORD, data: ?*anyopaque, len: ?*DWORD) LSTATUS;
 
             fn getStringAlloc(allocator: std.mem.Allocator, key: HKEY, value: [*:0]const u8) ?[]const u8 {
                 // query the length

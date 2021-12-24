@@ -151,7 +151,7 @@ pub const __wsum = __u32;
 pub const __poll_t = c_uint;
 const struct_unnamed_4 = extern struct {
     flags: u32,
-    stack_base: ?*c_void,
+    stack_base: ?*anyopaque,
     stack_size: usize,
     guard_size: usize,
     sched_policy: i32,
@@ -212,7 +212,7 @@ pub const ino_t = __ino_t;
 pub const ino64_t = u64;
 pub const __nlink_t = u32;
 pub const nlink_t = __nlink_t;
-pub const __timer_t = ?*c_void;
+pub const __timer_t = ?*anyopaque;
 pub const timer_t = __timer_t;
 pub const __suseconds_t = __kernel_suseconds_t;
 pub const suseconds_t = __suseconds_t;
@@ -256,11 +256,11 @@ pub extern fn AAssetManager_open(mgr: ?*AAssetManager, filename: [*c]const u8, m
 pub extern fn AAssetDir_getNextFileName(assetDir: ?*AAssetDir) [*c]const u8;
 pub extern fn AAssetDir_rewind(assetDir: ?*AAssetDir) void;
 pub extern fn AAssetDir_close(assetDir: ?*AAssetDir) void;
-pub extern fn AAsset_read(asset: ?*AAsset, buf: ?*c_void, count: usize) c_int;
+pub extern fn AAsset_read(asset: ?*AAsset, buf: ?*anyopaque, count: usize) c_int;
 pub extern fn AAsset_seek(asset: ?*AAsset, offset: off_t, whence: c_int) off_t;
 pub extern fn AAsset_seek64(asset: ?*AAsset, offset: off64_t, whence: c_int) off64_t;
 pub extern fn AAsset_close(asset: ?*AAsset) void;
-pub extern fn AAsset_getBuffer(asset: ?*AAsset) ?*const c_void;
+pub extern fn AAsset_getBuffer(asset: ?*AAsset) ?*const anyopaque;
 pub extern fn AAsset_getLength(asset: ?*AAsset) off_t;
 pub extern fn AAsset_getLength64(asset: ?*AAsset) off64_t;
 pub extern fn AAsset_getRemainingLength(asset: ?*AAsset) off_t;
@@ -441,11 +441,11 @@ const enum_unnamed_14 = enum(c_int) {
     ALOOPER_EVENT_INVALID = 16,
     _,
 };
-pub const ALooper_callbackFunc = ?fn (c_int, c_int, ?*c_void) callconv(.C) c_int;
-pub extern fn ALooper_pollOnce(timeoutMillis: c_int, outFd: [*c]c_int, outEvents: [*c]c_int, outData: [*c]?*c_void) c_int;
-pub extern fn ALooper_pollAll(timeoutMillis: c_int, outFd: [*c]c_int, outEvents: [*c]c_int, outData: [*c]?*c_void) c_int;
+pub const ALooper_callbackFunc = ?fn (c_int, c_int, ?*anyopaque) callconv(.C) c_int;
+pub extern fn ALooper_pollOnce(timeoutMillis: c_int, outFd: [*c]c_int, outEvents: [*c]c_int, outData: [*c]?*anyopaque) c_int;
+pub extern fn ALooper_pollAll(timeoutMillis: c_int, outFd: [*c]c_int, outEvents: [*c]c_int, outData: [*c]?*anyopaque) c_int;
 pub extern fn ALooper_wake(looper: ?*ALooper) void;
-pub extern fn ALooper_addFd(looper: ?*ALooper, fd: c_int, ident: c_int, events: c_int, callback: ALooper_callbackFunc, data: ?*c_void) c_int;
+pub extern fn ALooper_addFd(looper: ?*ALooper, fd: c_int, ident: c_int, events: c_int, callback: ALooper_callbackFunc, data: ?*anyopaque) c_int;
 pub extern fn ALooper_removeFd(looper: ?*ALooper, fd: c_int) c_int;
 pub const jboolean = u8;
 pub const jbyte = i8;
@@ -456,7 +456,7 @@ pub const jlong = i64;
 pub const jfloat = f32;
 pub const jdouble = f64;
 pub const jsize = jint;
-pub const jobject = ?*c_void;
+pub const jobject = ?*anyopaque;
 pub const jclass = jobject;
 pub const jstring = jobject;
 pub const jarray = jobject;
@@ -476,14 +476,14 @@ pub const jfieldID = ?*struct__jfieldID;
 pub const struct__jmethodID = opaque {};
 pub const jmethodID = ?*struct__jmethodID;
 pub const struct_JNIInvokeInterface = extern struct {
-    reserved0: ?*c_void,
-    reserved1: ?*c_void,
-    reserved2: ?*c_void,
+    reserved0: ?*anyopaque,
+    reserved1: ?*anyopaque,
+    reserved2: ?*anyopaque,
     DestroyJavaVM: fn (*JavaVM) callconv(.C) jint,
-    AttachCurrentThread: fn (*JavaVM, **JNIEnv, ?*c_void) callconv(.C) jint,
+    AttachCurrentThread: fn (*JavaVM, **JNIEnv, ?*anyopaque) callconv(.C) jint,
     DetachCurrentThread: fn (*JavaVM) callconv(.C) jint,
-    GetEnv: fn (*JavaVM, *?*c_void, jint) callconv(.C) jint,
-    AttachCurrentThreadAsDaemon: fn (*JavaVM, **JNIEnv, ?*c_void) callconv(.C) jint,
+    GetEnv: fn (*JavaVM, *?*anyopaque, jint) callconv(.C) jint,
+    AttachCurrentThreadAsDaemon: fn (*JavaVM, **JNIEnv, ?*anyopaque) callconv(.C) jint,
 };
 pub const union_jvalue = extern union {
     z: jboolean,
@@ -512,14 +512,14 @@ pub const jobjectRefType = enum_jobjectRefType;
 const struct_unnamed_15 = extern struct {
     name: [*c]const u8,
     signature: [*c]const u8,
-    fnPtr: ?*c_void,
+    fnPtr: ?*anyopaque,
 };
 pub const JNINativeMethod = struct_unnamed_15;
 pub const JNINativeInterface = extern struct {
-    reserved0: ?*c_void,
-    reserved1: ?*c_void,
-    reserved2: ?*c_void,
-    reserved3: ?*c_void,
+    reserved0: ?*anyopaque,
+    reserved1: ?*anyopaque,
+    reserved2: ?*anyopaque,
+    reserved3: ?*anyopaque,
     GetVersion: fn (*JNIEnv) callconv(.C) jint,
     DefineClass: fn (*JNIEnv, [*c]const u8, jobject, [*c]const jbyte, jsize) callconv(.C) jclass,
     FindClass: fn (*JNIEnv, [*c]const u8) callconv(.C) jclass,
@@ -738,15 +738,15 @@ pub const JNINativeInterface = extern struct {
     GetJavaVM: fn (*JNIEnv, [*c][*c]JavaVM) callconv(.C) jint,
     GetStringRegion: fn (*JNIEnv, jstring, jsize, jsize, [*c]jchar) callconv(.C) void,
     GetStringUTFRegion: fn (*JNIEnv, jstring, jsize, jsize, [*c]u8) callconv(.C) void,
-    GetPrimitiveArrayCritical: fn (*JNIEnv, jarray, [*c]jboolean) callconv(.C) ?*c_void,
-    ReleasePrimitiveArrayCritical: fn (*JNIEnv, jarray, ?*c_void, jint) callconv(.C) void,
+    GetPrimitiveArrayCritical: fn (*JNIEnv, jarray, [*c]jboolean) callconv(.C) ?*anyopaque,
+    ReleasePrimitiveArrayCritical: fn (*JNIEnv, jarray, ?*anyopaque, jint) callconv(.C) void,
     GetStringCritical: fn (*JNIEnv, jstring, [*c]jboolean) callconv(.C) [*c]const jchar,
     ReleaseStringCritical: fn (*JNIEnv, jstring, [*c]const jchar) callconv(.C) void,
     NewWeakGlobalRef: fn (*JNIEnv, jobject) callconv(.C) jweak,
     DeleteWeakGlobalRef: fn (*JNIEnv, jweak) callconv(.C) void,
     ExceptionCheck: fn (*JNIEnv) callconv(.C) jboolean,
-    NewDirectByteBuffer: fn (*JNIEnv, ?*c_void, jlong) callconv(.C) jobject,
-    GetDirectBufferAddress: fn (*JNIEnv, jobject) callconv(.C) ?*c_void,
+    NewDirectByteBuffer: fn (*JNIEnv, ?*anyopaque, jlong) callconv(.C) jobject,
+    GetDirectBufferAddress: fn (*JNIEnv, jobject) callconv(.C) ?*anyopaque,
     GetDirectBufferCapacity: fn (*JNIEnv, jobject) callconv(.C) jlong,
     GetObjectRefType: fn (*JNIEnv, jobject) callconv(.C) jobjectRefType,
 };
@@ -767,7 +767,7 @@ pub const struct_JavaVMAttachArgs = extern struct {
 pub const JavaVMAttachArgs = struct_JavaVMAttachArgs;
 pub const struct_JavaVMOption = extern struct {
     optionString: [*c]const u8,
-    extraInfo: ?*c_void,
+    extraInfo: ?*anyopaque,
 };
 pub const JavaVMOption = struct_JavaVMOption;
 pub const struct_JavaVMInitArgs = extern struct {
@@ -777,11 +777,11 @@ pub const struct_JavaVMInitArgs = extern struct {
     ignoreUnrecognized: jboolean,
 };
 pub const JavaVMInitArgs = struct_JavaVMInitArgs;
-pub extern fn JNI_GetDefaultJavaVMInitArgs(?*c_void) jint;
-pub extern fn JNI_CreateJavaVM([*c][*c]JavaVM, [*c][*c]JNIEnv, ?*c_void) jint;
+pub extern fn JNI_GetDefaultJavaVMInitArgs(?*anyopaque) jint;
+pub extern fn JNI_CreateJavaVM([*c][*c]JavaVM, [*c][*c]JNIEnv, ?*anyopaque) jint;
 pub extern fn JNI_GetCreatedJavaVMs([*c][*c]JavaVM, jsize, [*c]jsize) jint;
-pub extern fn JNI_OnLoad(vm: [*c]JavaVM, reserved: ?*c_void) jint;
-pub extern fn JNI_OnUnload(vm: [*c]JavaVM, reserved: ?*c_void) void;
+pub extern fn JNI_OnLoad(vm: [*c]JavaVM, reserved: ?*anyopaque) jint;
+pub extern fn JNI_OnUnload(vm: [*c]JavaVM, reserved: ?*anyopaque) void;
 pub const AKEYCODE_UNKNOWN = @enumToInt(enum_unnamed_16.AKEYCODE_UNKNOWN);
 pub const AKEYCODE_SOFT_LEFT = @enumToInt(enum_unnamed_16.AKEYCODE_SOFT_LEFT);
 pub const AKEYCODE_SOFT_RIGHT = @enumToInt(enum_unnamed_16.AKEYCODE_SOFT_RIGHT);
@@ -1761,7 +1761,7 @@ pub extern fn AMotionEvent_getHistoricalAxisValue(motion_event: ?*const AInputEv
 
 pub const AInputQueue = opaque {};
 
-pub extern fn AInputQueue_attachLooper(queue: ?*AInputQueue, looper: ?*ALooper, ident: c_int, callback: ALooper_callbackFunc, data: ?*c_void) void;
+pub extern fn AInputQueue_attachLooper(queue: ?*AInputQueue, looper: ?*ALooper, ident: c_int, callback: ALooper_callbackFunc, data: ?*anyopaque) void;
 pub extern fn AInputQueue_detachLooper(queue: ?*AInputQueue) void;
 pub extern fn AInputQueue_hasEvents(queue: ?*AInputQueue) i32;
 pub extern fn AInputQueue_getEvent(queue: ?*AInputQueue, outEvent: *?*AInputEvent) i32;
@@ -1922,7 +1922,7 @@ pub const struct_AHardwareBuffer_Desc = extern struct {
 };
 pub const AHardwareBuffer_Desc = struct_AHardwareBuffer_Desc;
 pub const struct_AHardwareBuffer_Plane = extern struct {
-    data: ?*c_void,
+    data: ?*anyopaque,
     pixelStride: u32,
     rowStride: u32,
 };
@@ -1938,13 +1938,13 @@ pub extern fn AHardwareBuffer_allocate(desc: [*c]const AHardwareBuffer_Desc, out
 pub extern fn AHardwareBuffer_acquire(buffer: ?*AHardwareBuffer) void;
 pub extern fn AHardwareBuffer_release(buffer: ?*AHardwareBuffer) void;
 pub extern fn AHardwareBuffer_describe(buffer: ?*const AHardwareBuffer, outDesc: [*c]AHardwareBuffer_Desc) void;
-pub extern fn AHardwareBuffer_lock(buffer: ?*AHardwareBuffer, usage: u64, fence: i32, rect: [*c]const ARect, outVirtualAddress: [*c]?*c_void) c_int;
+pub extern fn AHardwareBuffer_lock(buffer: ?*AHardwareBuffer, usage: u64, fence: i32, rect: [*c]const ARect, outVirtualAddress: [*c]?*anyopaque) c_int;
 pub extern fn AHardwareBuffer_lockPlanes(buffer: ?*AHardwareBuffer, usage: u64, fence: i32, rect: [*c]const ARect, outPlanes: [*c]AHardwareBuffer_Planes) c_int;
 pub extern fn AHardwareBuffer_unlock(buffer: ?*AHardwareBuffer, fence: [*c]i32) c_int;
 pub extern fn AHardwareBuffer_sendHandleToUnixSocket(buffer: ?*const AHardwareBuffer, socketFd: c_int) c_int;
 pub extern fn AHardwareBuffer_recvHandleFromUnixSocket(socketFd: c_int, outBuffer: [*c]?*AHardwareBuffer) c_int;
 pub extern fn AHardwareBuffer_isSupported(desc: [*c]const AHardwareBuffer_Desc) c_int;
-pub extern fn AHardwareBuffer_lockAndGetInfo(buffer: ?*AHardwareBuffer, usage: u64, fence: i32, rect: [*c]const ARect, outVirtualAddress: [*c]?*c_void, outBytesPerPixel: [*c]i32, outBytesPerStride: [*c]i32) c_int;
+pub extern fn AHardwareBuffer_lockAndGetInfo(buffer: ?*AHardwareBuffer, usage: u64, fence: i32, rect: [*c]const ARect, outVirtualAddress: [*c]?*anyopaque, outBytesPerPixel: [*c]i32, outBytesPerStride: [*c]i32) c_int;
 pub const WINDOW_FORMAT_RGBA_8888 = @enumToInt(enum_ANativeWindow_LegacyFormat.WINDOW_FORMAT_RGBA_8888);
 pub const WINDOW_FORMAT_RGBX_8888 = @enumToInt(enum_ANativeWindow_LegacyFormat.WINDOW_FORMAT_RGBX_8888);
 pub const WINDOW_FORMAT_RGB_565 = @enumToInt(enum_ANativeWindow_LegacyFormat.WINDOW_FORMAT_RGB_565);
@@ -1976,7 +1976,7 @@ pub const struct_ANativeWindow_Buffer = extern struct {
     height: i32,
     stride: i32,
     format: i32,
-    bits: ?*c_void,
+    bits: ?*anyopaque,
     reserved: [6]u32,
 };
 pub const ANativeWindow_Buffer = struct_ANativeWindow_Buffer;
@@ -2017,11 +2017,11 @@ pub const ANativeActivity = extern struct {
     internalDataPath: [*:0]const u8,
     externalDataPath: [*:0]const u8,
     sdkVersion: i32,
-    instance: ?*c_void,
+    instance: ?*anyopaque,
     assetManager: ?*AAssetManager,
     obbPath: [*:0]const u8,
 };
-pub const ANativeActivity_createFunc = fn ([*c]ANativeActivity, ?*c_void, usize) callconv(.C) void;
+pub const ANativeActivity_createFunc = fn ([*c]ANativeActivity, ?*anyopaque, usize) callconv(.C) void;
 
 pub extern fn ANativeActivity_finish(activity: [*c]ANativeActivity) void;
 pub extern fn ANativeActivity_setWindowFormat(activity: [*c]ANativeActivity, format: i32) void;
@@ -2402,7 +2402,7 @@ pub const __NDK_MINOR__ = 1;
 pub const __NDK_BETA__ = 0;
 pub const __NDK_BUILD__ = 6352462;
 pub const __NDK_CANARY__ = 0;
-pub const NULL = (@import("std").meta.cast(?*c_void, 0));
+pub const NULL = (@import("std").meta.cast(?*anyopaque, 0));
 
 pub const WCHAR_MAX = __WCHAR_MAX__;
 pub const WCHAR_MIN = '\x00';
