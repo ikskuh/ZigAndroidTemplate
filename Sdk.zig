@@ -617,9 +617,16 @@ pub fn compileAppLibrary(
 
     const lib_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ lib_dir_root, config.lib_dir }) catch unreachable;
 
+    const prebuilt_dir = switch (builtin.os.tag) {
+        .windows => "windows",
+        .linux => "linux",
+        .macos => "darwin",
+        else => unreachable,
+    };
+
     const libgcc_path = sdk.b.fmt(
-        "{s}/toolchains/{s}/prebuilt/windows-x86_64/lib/gcc/{s}/4.9.x/libgcc.a",
-        .{ ndk_root, config.libgcc_dir, config.include_dir },
+        "{s}/toolchains/{s}/prebuilt/{s}-x86_64/lib/gcc/{s}/4.9.x/libgcc.a",
+        .{ ndk_root, config.libgcc_dir, prebuilt_dir, config.include_dir },
     );
 
     exe.setTarget(config.target);
