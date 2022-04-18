@@ -574,6 +574,7 @@ pub fn compileAppLibrary(
     const TargetConfig = struct {
         lib_dir: []const u8,
         include_dir: []const u8,
+        libgcc_dir: []const u8,
         out_dir: []const u8,
         target: std.zig.CrossTarget,
     };
@@ -581,24 +582,28 @@ pub fn compileAppLibrary(
     const config: TargetConfig = switch (target) {
         .aarch64 => TargetConfig{
             .lib_dir = "arch-arm64/usr/lib",
+            .libgcc_dir = "aarch64-linux-android-4.9",
             .include_dir = "aarch64-linux-android",
             .out_dir = "arm64-v8a",
             .target = zig_targets.aarch64,
         },
         .arm => TargetConfig{
             .lib_dir = "arch-arm/usr/lib",
+            .libgcc_dir = "arm-linux-androideabi-4.9",
             .include_dir = "arm-linux-androideabi",
             .out_dir = "armeabi",
             .target = zig_targets.arm,
         },
         .x86 => TargetConfig{
             .lib_dir = "arch-x86/usr/lib",
+            .libgcc_dir = "x86-4.9",
             .include_dir = "i686-linux-android",
             .out_dir = "x86",
             .target = zig_targets.x86,
         },
         .x86_64 => TargetConfig{
             .lib_dir = "arch-x86_64/usr/lib64",
+            .libgcc_dir = "x86_64-4.9",
             .include_dir = "x86_64-linux-android",
             .out_dir = "x86_64",
             .target = zig_targets.x86_64,
@@ -612,8 +617,14 @@ pub fn compileAppLibrary(
 
     const lib_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ lib_dir_root, config.lib_dir }) catch unreachable;
 
+    const libgcc_path = sdk.b.fmt(
+        "{s}/toolchains/{s}/prebuilt/windows-x86_64/lib/gcc/{s}/4.9.x/libgcc.a",
+        .{ ndk_root, config.libgcc_dir, config.include_dir },
+    );
+
     exe.setTarget(config.target);
     exe.addLibPath(lib_dir);
+    exe.addObjectFile(libgcc_path);
     exe.addIncludeDir(std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable);
 
     exe.setLibCFile(sdk.createLibCFile(config.out_dir, include_dir, include_dir, lib_dir) catch unreachable);
