@@ -384,8 +384,8 @@ fn findProgramPath(allocator: std.mem.Allocator, program: []const u8) ?[]const u
     else
         &[_][]const u8{ "which", program };
 
-    const proc = std.ChildProcess.init(args, allocator) catch return null;
-    defer proc.deinit();
+    var proc = std.ChildProcess.init(args, allocator);
+
     proc.stderr_behavior = .Close;
     proc.stdout_behavior = .Pipe;
     proc.stdin_behavior = .Close;
