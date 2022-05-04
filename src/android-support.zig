@@ -310,7 +310,10 @@ inline fn printSymbolInfoAt(st_index: usize, maybe_debug_info: ?*std.debug.Debug
 
     if (maybe_debug_info) |di| {
         if (di.getModuleForAddress(int_addr)) |module| {
-            if (module.getSymbolAtAddress(int_addr)) |symbol| {
+            var symbol_buffer: [1024]u8 = undefined;
+            var fba = std.heap.FixedBufferAllocator.init(&symbol_buffer);
+
+            if (module.getSymbolAtAddress(fba.allocator(), int_addr)) |symbol| {
 
                 // symbol_name_buffer
 

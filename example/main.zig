@@ -520,9 +520,9 @@ pub const AndroidApp = struct {
                     const t = @intToFloat(f32, loop) / 100.0;
 
                     c.glClearColor(
-                        0.5 + 0.5 * std.math.sin(t + 0.0),
-                        0.5 + 0.5 * std.math.sin(t + 1.0),
-                        0.5 + 0.5 * std.math.sin(t + 2.0),
+                        0.5 + 0.5 * @sin(t + 0.0),
+                        0.5 + 0.5 * @sin(t + 1.0),
+                        0.5 + 0.5 * @sin(t + 2.0),
                         1.0,
                     );
                     c.glClear(c.GL_COLOR_BUFFER_BIT);
@@ -582,10 +582,10 @@ pub const AndroidApp = struct {
 
                     matrix[1][1] = self.screen_width / self.screen_height;
 
-                    matrix[0][0] = std.math.sin(t);
-                    matrix[2][0] = std.math.cos(t);
-                    matrix[0][2] = std.math.cos(t);
-                    matrix[2][2] = -std.math.sin(t);
+                    matrix[0][0] = @sin(t);
+                    matrix[2][0] = @cos(t);
+                    matrix[0][2] = @cos(t);
+                    matrix[2][2] = -@sin(t);
 
                     c.glUniformMatrix4fv(uTransform, 1, c.GL_FALSE, @ptrCast([*]const f32, &matrix));
 
