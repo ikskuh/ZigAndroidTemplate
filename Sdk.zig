@@ -17,7 +17,7 @@ const Sdk = @This();
 /// The builder instance associated with this object.
 b: *Builder,
 
-/// A set of tools that run on the build host that are required to complete the 
+/// A set of tools that run on the build host that are required to complete the
 /// project build. Must be created with the `hostTools()` function that passes in
 /// the correct relpath to the package.
 host_tools: HostTools,
@@ -142,7 +142,7 @@ pub const AppConfig = struct {
     package_name: []const u8,
 
     /// The android version which is embedded in the manifset.
-    /// This is usually the same version as of the SDK that was used, but might also be 
+    /// This is usually the same version as of the SDK that was used, but might also be
     /// overridden for a specific app.
     target_sdk_version: ?u16 = null,
 
@@ -220,7 +220,7 @@ pub const CreateAppStep = struct {
     pub fn getAndroidPackage(self: @This(), name: []const u8) std.build.Pkg {
         return self.sdk.b.dupePkg(std.build.Pkg{
             .name = name,
-            .path = .{ .path = sdkRoot() ++ "/src/android-support.zig" },
+            .source = .{ .path = sdkRoot() ++ "/src/android-support.zig" },
             .dependencies = &[_]std.build.Pkg{
                 self.build_options.getPackage("build_options"),
             },
@@ -842,7 +842,7 @@ const BuildOptionStep = struct {
     pub fn getPackage(self: *Self, name: []const u8) std.build.Pkg {
         return self.builder.dupePkg(std.build.Pkg{
             .name = name,
-            .path = .{ .generated = &self.package_file },
+            .source = .{ .generated = &self.package_file },
         });
     }
 
