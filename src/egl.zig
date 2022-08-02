@@ -79,11 +79,10 @@ pub const EGLContext = struct {
 
         const context_attribute_list = [_]EGLint{ c.EGL_CONTEXT_CLIENT_VERSION, 2, c.EGL_NONE };
 
-        var context = c.eglCreateContext(egl_display, config, null, &context_attribute_list);
-        if (context == null) {
+        const context = c.eglCreateContext(egl_display, config, null, &context_attribute_list) orelse {
             log.err("Error: eglCreateContext failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.FailedToInitializeEGL;
-        }
+        };
         errdefer _ = c.eglDestroyContext(egl_display, context);
 
         log.info("Context created: {}\n", .{context});
@@ -96,15 +95,13 @@ pub const EGLContext = struct {
         log.info("Screen Resolution: {}x{}\n", .{ android_width, android_height });
 
         const window_attribute_list = [_]EGLint{c.EGL_NONE};
-        const egl_surface = c.eglCreateWindowSurface(egl_display, config, native_window, &window_attribute_list);
-
-        log.info("Got Surface: {}\n", .{egl_surface});
-
-        if (egl_surface == null) {
+        const egl_surface = c.eglCreateWindowSurface(egl_display, config, native_window, &window_attribute_list) orelse {
             log.err("Error: eglCreateWindowSurface failed: 0x{X:0>4}\n", .{c.eglGetError()});
             return error.FailedToInitializeEGL;
-        }
+        };
         errdefer _ = c.eglDestroySurface(egl_display, context);
+
+        log.info("Got Surface: {}\n", .{egl_surface});
 
         return Self{
             .display = egl_display,

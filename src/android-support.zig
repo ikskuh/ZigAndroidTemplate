@@ -330,7 +330,7 @@ inline fn printSymbolInfoAt(st_index: usize, maybe_debug_info: ?*std.debug.Debug
         } else |_| {}
     }
 
-    std.log.info("#{d:0>2}: 0x{X:0>8} {s}", .{
+    std.log.info("#{d:0>2}: 0x{X:0>8} {?s}", .{
         st_index,
         int_addr,
         symbol_name,
