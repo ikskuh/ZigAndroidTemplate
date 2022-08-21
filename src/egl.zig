@@ -85,7 +85,7 @@ pub const EGLContext = struct {
         };
         errdefer _ = c.eglDestroyContext(egl_display, context);
 
-        log.info("Context created: {}\n", .{context});
+        log.info("Context created: {?}\n", .{context});
 
         var native_window: c.EGLNativeWindowType = @ptrCast(c.EGLNativeWindowType, window); // this is safe, just a C import problem
 
