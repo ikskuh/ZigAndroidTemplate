@@ -7,8 +7,13 @@ const builtin = @import("builtin");
 
 const auto_detect = @import("build/auto-detect.zig");
 
-fn sdkRoot() []const u8 {
+fn sdkRootIntern() []const u8 {
     return std.fs.path.dirname(@src().file) orelse ".";
+}
+
+fn sdkRoot() *const [sdkRootIntern().len]u8 {
+    comptime var buffer = sdkRootIntern();
+    return buffer[0..buffer.len];
 }
 
 /// This file encodes a instance of an Android SDK interface.

@@ -32,14 +32,14 @@ pub fn main() Error!u8 {
         else => {},
     };
 
-    const zip = c.zip_open(zip_file, c.ZIP_DEFAULT_COMPRESSION_LEVEL, 'a') orelse return error.FileNotFound;
+    const zip = c.zip_open(zip_file.ptr, c.ZIP_DEFAULT_COMPRESSION_LEVEL, 'a') orelse return error.FileNotFound;
     defer c.zip_close(zip);
 
-    if (c.zip_entry_open(zip, dst_file_name) < 0)
+    if (c.zip_entry_open(zip, dst_file_name.ptr) < 0)
         return error.FailedToCreateEntry;
     defer _ = c.zip_entry_close(zip);
 
-    if (c.zip_entry_fwrite(zip, src_file_name) < 0)
+    if (c.zip_entry_fwrite(zip, src_file_name.ptr) < 0)
         return error.FailedToWriteEntry;
 
     return 0;
