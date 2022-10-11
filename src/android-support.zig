@@ -20,6 +20,7 @@ pub var sdk_version: c_int = 0;
 
 /// Actual application entry point
 export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedState: ?[*]u8, savedStateSize: usize) callconv(.C) void {
+    // @compileLog("compiling ANativeActivity_onCreate");
     {
         var sdk_ver_str: [92]u8 = undefined;
         const len = android.__system_property_get("ro.build.version.sdk", &sdk_ver_str);
@@ -76,7 +77,7 @@ export fn __errno_location() *c_int {
 var recursive_panic = false;
 
 // Android Panic implementation
-pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noreturn {
+pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     var logger = LogWriter{ .log_level = android.ANDROID_LOG_ERROR };
 
     if (@atomicLoad(bool, &recursive_panic, .SeqCst)) {

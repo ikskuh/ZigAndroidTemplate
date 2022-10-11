@@ -458,12 +458,16 @@ fn findProblemWithAndroidNdk(b: *Builder, versions: Sdk.ToolchainVersions, path:
 
     const ndk_include_path = std.fs.path.join(b.allocator, &[_][]const u8{
         path,
+        "toolchains",
+        "llvm",
+        "prebuilt",
+        "linux-x86_64", //<host-tag>
         "sysroot",
         "usr",
         "include",
     }) catch unreachable;
     std.fs.cwd().access(ndk_include_path, .{}) catch |err| {
-        return b.fmt("Cannot access sysroot/usr/include/, {s}\nMake sure you are using NDK {s}.", .{ @errorName(err), versions.ndk_version });
+        return b.fmt("Cannot access {s}, {s}\nMake sure you are using NDK {s}.", .{ ndk_include_path, @errorName(err), versions.ndk_version });
     };
 
     return null;
