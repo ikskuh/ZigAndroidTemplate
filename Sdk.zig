@@ -65,8 +65,9 @@ pub fn init(b: *Builder, user_config: ?UserConfig, versions: ToolchainVersions) 
         zip_add.addCSourceFile(sdkRoot() ++ "/vendor/kuba-zip/zip.c", &[_][]const u8{
             "-std=c99",
             "-fno-sanitize=undefined",
+            "-D_POSIX_C_SOURCE=200112L",
         });
-        zip_add.addIncludeDir(sdkRoot() ++ "/vendor/kuba-zip");
+        zip_add.addIncludePath(sdkRoot() ++ "/vendor/kuba-zip");
         zip_add.linkLibC();
 
         break :blk HostTools{
@@ -86,9 +87,9 @@ pub fn init(b: *Builder, user_config: ?UserConfig, versions: ToolchainVersions) 
 }
 
 pub const ToolchainVersions = struct {
-    android_sdk_version: u16 = 28,
-    build_tools_version: []const u8 = "28.0.3",
-    ndk_version: []const u8 = "21.1.6352462",
+    android_sdk_version: u16 = 30,
+    build_tools_version: []const u8 = "30.0.2",
+    ndk_version: []const u8 = "25.1.8937393",
 
     pub fn androidSdkString(self: ToolchainVersions, buf: *[5]u8) []u8 {
         return std.fmt.bufPrint(buf, "{d}", .{self.android_sdk_version}) catch unreachable;
@@ -205,7 +206,7 @@ pub const SystemTools = struct {
 /// The configuration which targets a app should be built for.
 pub const AppTargetConfig = struct {
     aarch64: bool = true,
-    arm: bool = false, // re-enable when https://github.com/ziglang/zig/issues/8885 is resolved
+    arm: bool = true, // re-enable when https://github.com/ziglang/zig/issues/8885 is resolved
     x86_64: bool = true,
     x86: bool = false,
 };
@@ -402,7 +403,7 @@ pub fn createApp(
             libs.append(step) catch unreachable;
 
             const so_dir = switch (target_name) {
-                .aarch64 => "lib/arm64-v8a/",
+                .aarch64 => "lib/arm64/",
                 .arm => "lib/armeabi/",
                 .x86_64 => "lib/x86_64/",
                 .x86 => "lib/x86/",
@@ -547,12 +548,6 @@ pub fn compileAppLibrary(
     target: Target,
     // build_options: std.build.Pkg,
 ) *std.build.LibExeObjStep {
-    switch (target) {
-        .arm => @panic("compiling android apps to arm not supported right now. see: https://github.com/ziglang/zig/issues/8885"),
-        .x86 => @panic("compiling android apps to x86 not supported right now. see https://github.com/ziglang/zig/issues/7935"),
-        else => {},
-    }
-
     const ndk_root = sdk.b.pathFromRoot(sdk.folders.android_ndk_root);
 
     const exe = sdk.b.addSharedLibrary(app_config.app_name, src_file, .unversioned);
@@ -563,11 +558,12 @@ pub fn compileAppLibrary(
     exe.link_function_sections = true;
     exe.bundle_compiler_rt = true;
     exe.strip = (mode == .ReleaseSmall);
+    exe.export_table = true;
 
     exe.defineCMacro("ANDROID", null);
 
-    const include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ ndk_root, "sysroot/usr/include" }) catch unreachable;
-    exe.addIncludeDir(include_dir);
+    const include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ ndk_root, "toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include" }) catch unreachable;
+    exe.addIncludePath(include_dir);
 
     exe.linkLibC();
     for (app_libs) |lib| {
@@ -579,68 +575,51 @@ pub fn compileAppLibrary(
     const TargetConfig = struct {
         lib_dir: []const u8,
         include_dir: []const u8,
-        libgcc_dir: []const u8,
         out_dir: []const u8,
         target: std.zig.CrossTarget,
     };
 
     const config: TargetConfig = switch (target) {
         .aarch64 => TargetConfig{
-            .lib_dir = "arch-arm64/usr/lib",
-            .libgcc_dir = "aarch64-linux-android-4.9",
+            .lib_dir = "aarch64-linux-android",
             .include_dir = "aarch64-linux-android",
-            .out_dir = "arm64-v8a",
+            .out_dir = "arm64",
             .target = zig_targets.aarch64,
         },
         .arm => TargetConfig{
-            .lib_dir = "arch-arm/usr/lib",
-            .libgcc_dir = "arm-linux-androideabi-4.9",
+            .lib_dir = "arm-linux-androideabi",
             .include_dir = "arm-linux-androideabi",
             .out_dir = "armeabi",
             .target = zig_targets.arm,
         },
         .x86 => TargetConfig{
-            .lib_dir = "arch-x86/usr/lib",
-            .libgcc_dir = "x86-4.9",
+            .lib_dir = "i686-linux-android",
             .include_dir = "i686-linux-android",
             .out_dir = "x86",
             .target = zig_targets.x86,
         },
         .x86_64 => TargetConfig{
-            .lib_dir = "arch-x86_64/usr/lib64",
-            .libgcc_dir = "x86_64-4.9",
+            .lib_dir = "x86_64-linux-android",
             .include_dir = "x86_64-linux-android",
             .out_dir = "x86_64",
             .target = zig_targets.x86_64,
         },
     };
 
-    const lib_dir_root = sdk.b.fmt("{s}/platforms/android-{d}", .{
+    const lib_dir = sdk.b.fmt("{s}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/{s}/{}/", .{
         ndk_root,
+        config.lib_dir,
         sdk.versions.android_sdk_version,
     });
 
-    const lib_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ lib_dir_root, config.lib_dir }) catch unreachable;
-
-    const prebuilt_dir = switch (builtin.os.tag) {
-        .windows => "windows",
-        .linux => "linux",
-        .macos => "darwin",
-        else => unreachable,
-    };
-
-    const libgcc_path = sdk.b.fmt(
-        "{s}/toolchains/{s}/prebuilt/{s}-x86_64/lib/gcc/{s}/4.9.x/libgcc.a",
-        .{ ndk_root, config.libgcc_dir, prebuilt_dir, config.include_dir },
-    );
-
     exe.setTarget(config.target);
-    exe.addLibPath(lib_dir);
-    exe.addObjectFile(libgcc_path);
-    exe.addIncludeDir(std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable);
+    exe.addLibraryPath(lib_dir);
+    exe.addIncludePath(std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable);
 
     exe.setLibCFile(sdk.createLibCFile(config.out_dir, include_dir, include_dir, lib_dir) catch unreachable);
     exe.libc_file.?.addStepDependencies(&exe.step);
+
+    exe.install();
 
     return exe;
 }

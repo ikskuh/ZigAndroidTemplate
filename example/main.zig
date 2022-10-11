@@ -11,6 +11,10 @@ const c = android.egl.c;
 
 const app_log = std.log.scoped(.app);
 
+comptime {
+    _ = android.ANativeActivity_createFunc;
+}
+
 /// Entry point for our application.
 /// This struct provides the interface to the android support package.
 pub const AndroidApp = struct {

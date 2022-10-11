@@ -52,7 +52,7 @@ pub fn build(b: *std.build.Builder) !void {
         mode,
         .{
             .aarch64 = b.option(bool, "aarch64", "Enable the aarch64 build") orelse true,
-            .arm = b.option(bool, "arm", "Enable the arm build") orelse false,
+            .arm = b.option(bool, "arm", "Enable the arm build") orelse true,
             .x86_64 = b.option(bool, "x86_64", "Enable the x86_64 build") orelse true,
             .x86 = b.option(bool, "x86", "Enable the x86 build") orelse false,
         }, // default targets
