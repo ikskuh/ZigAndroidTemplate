@@ -64,14 +64,6 @@ pub const AndroidApp = struct {
     /// It should create a background thread that processes the events and runs until
     /// the application gets destroyed.
     pub fn start(self: *Self) !void {
-        // This code somehow crashes yet. Needs more investigations
-        // {
-        //     var jni = JNI.init(self.activity);
-        //     defer jni.deinit();
-
-        //     // Must be called from main thread…
-        //     _ = jni.AndroidMakeFullscreen();
-        // }
         self.thread = try std.Thread.spawn(.{}, mainLoop, .{self});
     }
 
@@ -255,18 +247,19 @@ pub const AndroidApp = struct {
             defer jni.deinit();
 
             // Show/Hide keyboard
-            // _ = jni.AndroidDisplayKeyboard(true);
+            _ = jni.AndroidDisplayKeyboard(true);
 
             // this allows you to send the app in the background
             // const success = jni.AndroidSendToBack(true);
-            // std.app_log.debug(.app, "SendToBack() = {}\n", .{success});
+            // _ = success;
+            // std.log.scoped(.input).debug("SendToBack() = {}\n", .{success});
 
             // This is a demo on how to request permissions:
-            // if (event_type == .AMOTION_EVENT_ACTION_UP) {
-            //     if (!JNI.AndroidHasPermissions(self.activity, "android.permission.RECORD_AUDIO")) {
-            //         JNI.AndroidRequestAppPermissions(self.activity, "android.permission.RECORD_AUDIO");
-            //     }
-            // }
+            if (event_type == .AMOTION_EVENT_ACTION_UP) {
+                if (!JNI.AndroidHasPermissions(&jni, "android.permission.RECORD_AUDIO")) {
+                    JNI.AndroidRequestAppPermissions(&jni, "android.permission.RECORD_AUDIO");
+                }
+            }
         }
 
         std.log.scoped(.input).debug(
@@ -347,6 +340,13 @@ pub const AndroidApp = struct {
     }
 
     fn mainLoop(self: *Self) !void {
+        // This code somehow crashes yet. Needs more investigations
+        var jni = JNI.init(self.activity);
+        defer jni.deinit();
+
+        // Must be called from main thread…
+        _ = jni.AndroidMakeFullscreen();
+
         var loop: usize = 0;
         app_log.info("mainLoop() started\n", .{});
 

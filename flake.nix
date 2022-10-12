@@ -6,12 +6,13 @@
     devshell.url = "github:numtide/devshell";
     flake-utils.url = "github:numtide/flake-utils";
     android.url = "github:tadfisher/android-nixpkgs";
+    zig.url = "github:mitchellh/zig-overlay";
   };
 
-  outputs = { self, nixpkgs, devshell, flake-utils, android }:
+  outputs = { self, nixpkgs, devshell, flake-utils, android, zig }:
     {
       overlay = final: prev: {
-        inherit (self.packages.${final.system}) android-sdk android-studio;
+        inherit (self.packages.${final.system}) android-sdk android-studio zig;
       };
     }
     //
@@ -28,6 +29,7 @@
       in
       {
         packages = {
+          zig = zig.packages.${system}.master;
           android-sdk = android.sdk.${system} (sdkPkgs: with sdkPkgs; [
             # Useful packages for building and testing.
             build-tools-30-0-2
