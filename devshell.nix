@@ -29,5 +29,6 @@ devshell.mkShell {
     android-sdk
     gradle
     jdk11
+    zig
   ];
 }
