@@ -1,6 +1,6 @@
 //! External dependencies:
-//! - `keytool`, `jarsigner` from OpenJDK
-//! - `adb` from the Android tools package
+//! - `keytool` from OpenJDK
+//! - `apksigner`, `aapt`, `zipalign`, and `adb` from the Android tools package
 
 const std = @import("std");
 const builtin = @import("builtin");
@@ -190,9 +190,6 @@ pub const HostTools = struct {
 
 /// Configuration of the binary paths to all tools that are not included in the android SDK.
 pub const SystemTools = struct {
-    //keytool: []const u8 = "keytool",
-    //adb: []const u8 = "adb",
-    //jarsigner: []const u8 = "/usr/lib/jvm/java-11-openjdk/bin/jarsigner",
     mkdir: []const u8 = "mkdir",
     rm: []const u8 = "rm",
 
@@ -408,7 +405,7 @@ pub fn createApp(
             libs.append(step) catch unreachable;
 
             const so_dir = switch (target_name) {
-                .aarch64 => "lib/arm64/",
+                .aarch64 => "lib/arm64-v8a/",
                 .arm => "lib/armeabi/",
                 .x86_64 => "lib/x86_64/",
                 .x86 => "lib/x86/",
