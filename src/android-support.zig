@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const c = @import("c.zig");
 
@@ -31,8 +32,12 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
         }
     }
 
-    app_log.debug("Starting on Android Version {}\n", .{
+    app_log.debug("Starting on Android Version {}\nApp pid: {}\nABI: {s}-{s}-{s}", .{
         sdk_version,
+        std.os.linux.getpid(),
+        @tagName(builtin.cpu.arch),
+        @tagName(builtin.os.tag),
+        @tagName(builtin.abi),
     });
 
     const app = std.heap.c_allocator.create(AndroidApp) catch {
