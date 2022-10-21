@@ -20,12 +20,15 @@ devshell.mkShell {
       value = "${android-sdk}/share/android-sdk";
     }
     {
+      name = "ANDROID_NDK_ROOT";
+      value = "${android-sdk}/share/android-sdk/ndk";
+    }
+    {
       name = "JAVA_HOME";
       value = jdk11.home;
     }
   ];
   packages = [
-    android-studio
     android-sdk
     gradle
     jdk11

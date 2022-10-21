@@ -47,14 +47,14 @@ pub fn init(b: *Builder, user_config: ?UserConfig, versions: ToolchainVersions) 
         const zipalign = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", versions.build_tools_version, "zipalign" ++ exe }) catch unreachable;
         const aapt = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", versions.build_tools_version, "aapt" ++ exe }) catch unreachable;
         const adb = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "platform-tools", "adb" ++ exe }) catch unreachable;
-        const jarsigner = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.java_home, "bin", "jarsigner" ++ exe }) catch unreachable;
+        const apksigner = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", versions.build_tools_version, "apksigner" ++ exe }) catch unreachable;
         const keytool = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.java_home, "bin", "keytool" ++ exe }) catch unreachable;
 
         break :blk SystemTools{
             .zipalign = zipalign,
             .aapt = aapt,
             .adb = adb,
-            .jarsigner = jarsigner,
+            .apksigner = apksigner,
             .keytool = keytool,
         };
     };
@@ -199,7 +199,7 @@ pub const SystemTools = struct {
     zipalign: []const u8 = "zipalign",
     aapt: []const u8 = "aapt",
     adb: []const u8 = "adb",
-    jarsigner: []const u8 = "jarsigner",
+    apksigner: []const u8 = "apksigner",
     keytool: []const u8 = "keytool",
 };
 
@@ -354,12 +354,14 @@ pub fn createApp(
         "android.jar",
     }) catch unreachable;
 
+    const unaligned_apk_file = sdk.b.fmt("unaligned-{s}", .{apk_file});
+
     const make_unsigned_apk = sdk.b.addSystemCommand(&[_][]const u8{
         sdk.system_tools.aapt,
         "package",
         "-f", // force overwrite of existing files
         "-F", // specify the apk file to output
-        sdk.b.pathFromRoot(apk_file),
+        sdk.b.pathFromRoot(unaligned_apk_file),
         "-I", // add an existing package to base include set
         root_jar,
     });
@@ -388,7 +390,10 @@ pub fn createApp(
     build_options.add(u16, "android_sdk_version", app_config.target_sdk_version orelse sdk.versions.android_sdk_version);
     build_options.add(bool, "fullscreen", app_config.fullscreen);
 
+    const align_step = sdk.alignApk(unaligned_apk_file, apk_file);
+
     const sign_step = sdk.signApk(apk_file, key_store);
+    sign_step.dependOn(align_step);
 
     inline for (std.meta.fields(AppTargetConfig)) |fld| {
         const target_name = @field(Target, fld.name);
@@ -409,9 +414,9 @@ pub fn createApp(
                 .x86 => "lib/x86/",
             };
 
-            const copy_to_zip = CopyToZipStep.create(sdk, apk_file, so_dir, step.getOutputSource());
+            const copy_to_zip = CopyToZipStep.create(sdk, unaligned_apk_file, so_dir, step.getOutputSource());
             copy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
-            sign_step.dependOn(&copy_to_zip.step);
+            align_step.dependOn(&copy_to_zip.step);
         }
     }
 
@@ -679,19 +684,16 @@ pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []cons
 }
 
 pub fn signApk(sdk: Sdk, apk_file: []const u8, key_store: KeyStore) *Step {
+    const pass = sdk.b.fmt("pass:{s}", .{key_store.password});
     const sign_apk = sdk.b.addSystemCommand(&[_][]const u8{
-        sdk.system_tools.jarsigner,
-        "-sigalg",
-        "SHA1withRSA",
-        "-digestalg",
-        "SHA1",
-        "-verbose",
-        "-keystore",
+        sdk.system_tools.apksigner,
+        "sign",
+        "--ks", // keystore
         key_store.file,
-        "-storepass",
-        key_store.password,
+        "--ks-pass",
+        pass,
         sdk.b.pathFromRoot(apk_file),
-        key_store.alias,
+        // key_store.alias,
     });
     return &sign_apk.step;
 }
@@ -699,10 +701,12 @@ pub fn signApk(sdk: Sdk, apk_file: []const u8, key_store: KeyStore) *Step {
 pub fn alignApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []const u8) *Step {
     const step = sdk.b.addSystemCommand(&[_][]const u8{
         sdk.system_tools.zipalign,
-        "-v",
+        "-p", // ensure shared libraries are aligned to 4KiB
+        "-f", // overwrite existing files
+        "-v", // verbose
         "4",
-        sdk.builder.pathFromRoot(input_apk_file),
-        sdk.builder.pathFromRoot(output_apk_file),
+        sdk.b.pathFromRoot(input_apk_file),
+        sdk.b.pathFromRoot(output_apk_file),
     });
     return &step.step;
 }
