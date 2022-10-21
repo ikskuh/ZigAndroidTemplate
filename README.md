@@ -5,6 +5,7 @@
 This repository contains a example on how to create a minimal Android app in Zig.
 
 ## State of the project
+
 This project contains a really small app skeleton in `example/main.zig` which initializes OpenGL and renders a color cycle. Touchscreen events will be displayed as small circles beneath the fingers that will fade as soon as no event for the same finger will happen again.
 
 The code contains some commented examples on how to interface with the JNI to use advanced features of the `ANativeActivity`.
@@ -18,10 +19,12 @@ We're running a CI that will verify the build for Windows, macOS and Linux:
 ## Presentation
 
 There is a [FOSDEM Talk](https://fosdem.org/2021/schedule/event/zig_android/) you can watch here:
+
 - [MP4 Video](https://video.fosdem.org/2021/D.zig/zig_android.mp4)
 - [WebM Video](https://video.fosdem.org/2021/D.zig/zig_android.webm)
 
 ## What's missing
+
 - Configuration management example
 - Save/load app state example
 
@@ -44,9 +47,9 @@ There are convenience options with `zig build push` (installs the app on a conne
 Install the [`sdkmanager`](https://developer.android.com/studio/command-line/sdkmanager) and invoke the following command line:
 
 ```
-sdkmanager --install "platforms;android-28"
-sdkmanager --install "build-tools;28.0.3"
-sdkmanager --install "ndk;21.1.6352462"
+sdkmanager --install "platforms;android-21" # Min version: Android 5
+sdkmanager --install "build-tools;33.0.0"
+sdkmanager --install "ndk;25.1.8937393"
 zig build keystore install run
 ```
 
@@ -57,5 +60,5 @@ This should build an APK and install it on your connected phone if possible.
 Check out the [`build.zig`](build.zig) to see how to build a new android app, and [`example/main.zig`](example/main.zig) to see how to create a basic application. All of this is still very rough, though.
 
 ## Credits
-Huge thanks to [@cnlohr](https://github.com/cnlohr) to create [rawdrawandroid](https://github.com/cnlohr/rawdrawandroid) and making this project possible!
 
+Huge thanks to [@cnlohr](https://github.com/cnlohr) to create [rawdrawandroid](https://github.com/cnlohr/rawdrawandroid) and making this project possible!
