@@ -36,9 +36,21 @@ folders: UserConfig,
 
 versions: ToolchainVersions,
 
+pub const ToolchainSelector = union(enum) {
+    explicit: ToolchainVersions,
+    version: AndroidVersion,
+    default, // target KitKat/Android 4 by default
+};
+
 /// Initializes the android SDK.
 /// It requires some input on which versions of the tool chains should be used
-pub fn init(b: *Builder, user_config: ?UserConfig, versions: ToolchainVersions) *Sdk {
+pub fn init(b: *Builder, user_config: ?UserConfig, target: ToolchainSelector) *Sdk {
+    const versions = switch (target) {
+        .default => AndroidVersion.getToolchains(.android4),
+        .version => |vers| vers.getToolchains(),
+        .explicit => |toolchains| toolchains,
+    };
+
     const actual_user_config = user_config orelse auto_detect.findUserConfig(b, versions) catch |err| @panic(@errorName(err));
 
     const system_tools = blk: {
@@ -87,12 +99,52 @@ pub fn init(b: *Builder, user_config: ?UserConfig, versions: ToolchainVersions) 
 }
 
 pub const ToolchainVersions = struct {
-    android_sdk_version: u16 = 30,
-    build_tools_version: []const u8 = "30.0.2",
-    ndk_version: []const u8 = "25.1.8937393",
+    android_sdk_version: u16,
+    build_tools_version: []const u8,
+    ndk_version: []const u8,
 
     pub fn androidSdkString(self: ToolchainVersions, buf: *[5]u8) []u8 {
         return std.fmt.bufPrint(buf, "{d}", .{self.android_sdk_version}) catch unreachable;
+    }
+
+    pub fn init(sdk: u16, build_tools: []const u8, ndk: []const u8) ToolchainVersions {
+        return ToolchainVersions{
+            .android_sdk_version = sdk,
+            .build_tools_version = build_tools,
+            .ndk_version = ndk,
+        };
+    }
+};
+
+pub const AndroidVersion = enum {
+    android4,
+    android5,
+    android6,
+    android7,
+    android8,
+    android9,
+    android10,
+    android11,
+    android12,
+    android13,
+
+    pub fn getToolchains(version: AndroidVersion) ToolchainVersions {
+        const latest_build_tools = "33.0.0";
+        const latest_ndk = "25.1.8937393";
+
+        return switch (version) {
+            // TODO: Android 4 isn't supported by NDK 25.1.8937393. Find last NDK to support android 4
+            .android4 => ToolchainVersions.init(19, latest_build_tools, latest_ndk), // KitKat
+            .android5 => ToolchainVersions.init(21, latest_build_tools, latest_ndk), // Lollipop
+            .android6 => ToolchainVersions.init(23, latest_build_tools, latest_ndk), // Marshmallow
+            .android7 => ToolchainVersions.init(24, latest_build_tools, latest_ndk), // Nougat
+            .android8 => ToolchainVersions.init(26, latest_build_tools, latest_ndk), // Oreo
+            .android9 => ToolchainVersions.init(28, latest_build_tools, latest_ndk), // Pie
+            .android10 => ToolchainVersions.init(29, latest_build_tools, latest_ndk), // Quince Tart
+            .android11 => ToolchainVersions.init(30, latest_build_tools, latest_ndk), // Red Velvet Cake
+            .android12 => ToolchainVersions.init(31, latest_build_tools, latest_ndk), // Snow Cone
+            .android13 => ToolchainVersions.init(33, latest_build_tools, latest_ndk), // Tiramisu
+        };
     }
 };
 

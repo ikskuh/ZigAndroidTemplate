@@ -3,3 +3,4 @@ zig-cache
 *.keystore
 .vscode
 .build_config
+zig-out

@@ -7,7 +7,7 @@ const Sdk = @import("Sdk.zig");
 
 pub fn build(b: *std.build.Builder) !void {
     // Default-initialize SDK
-    const sdk = Sdk.init(b, null, .{});
+    const sdk = Sdk.init(b, null, .{ .version = .android5 });
     const mode = b.standardReleaseOptions();
 
     // Provide some KeyStore structure so we can sign our app.
