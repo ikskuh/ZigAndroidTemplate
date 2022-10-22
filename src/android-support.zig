@@ -43,8 +43,8 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
         \\  Compiler backend: {s}
     , .{
         build_options.app_name,
-        sdk_version,
         build_options.android_sdk_version,
+        sdk_version,
         std.os.linux.getpid(),
         @tagName(builtin.mode),
         @tagName(builtin.cpu.arch),

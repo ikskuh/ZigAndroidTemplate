@@ -4,3 +4,4 @@ zig-cache
 .vscode
 .build_config
 zig-out
+*.apk.idsig

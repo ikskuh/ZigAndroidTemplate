@@ -134,22 +134,23 @@ pub const AndroidApp = struct {
         android.AConfiguration_getCountry(config, &country);
 
         app_log.debug(
-            \\MCC:         {}
-            \\MNC:         {}
-            \\Language:    {s}
-            \\Country:     {s}
-            \\Orientation: {}
-            \\Touchscreen: {}
-            \\Density:     {}
-            \\Keyboard:    {}
-            \\Navigation:  {}
-            \\KeysHidden:  {}
-            \\NavHidden:   {}
-            \\SdkVersion:  {}
-            \\ScreenSize:  {}
-            \\ScreenLong:  {}
-            \\UiModeType:  {}
-            \\UiModeNight: {}
+            \\App Configuration:
+            \\  MCC:         {}
+            \\  MNC:         {}
+            \\  Language:    {s}
+            \\  Country:     {s}
+            \\  Orientation: {}
+            \\  Touchscreen: {}
+            \\  Density:     {}
+            \\  Keyboard:    {}
+            \\  Navigation:  {}
+            \\  KeysHidden:  {}
+            \\  NavHidden:   {}
+            \\  SdkVersion:  {}
+            \\  ScreenSize:  {}
+            \\  ScreenLong:  {}
+            \\  UiModeType:  {}
+            \\  UiModeNight: {}
             \\
         , .{
             android.AConfiguration_getMcc(config),
@@ -175,13 +176,13 @@ pub const AndroidApp = struct {
         const event_type = @intToEnum(android.AKeyEventActionType, android.AKeyEvent_getAction(event));
         std.log.scoped(.input).debug(
             \\Key Press Event: {}
-            \\Flags:       {}
-            \\KeyCode:     {}
-            \\ScanCode:    {}
-            \\MetaState:   {}
-            \\RepeatCount: {}
-            \\DownTime:    {}
-            \\EventTime:   {}
+            \\  Flags:       {}
+            \\  KeyCode:     {}
+            \\  ScanCode:    {}
+            \\  MetaState:   {}
+            \\  RepeatCount: {}
+            \\  DownTime:    {}
+            \\  EventTime:   {}
             \\
         , .{
             event_type,
@@ -264,17 +265,17 @@ pub const AndroidApp = struct {
 
         std.log.scoped(.input).debug(
             \\Motion Event {}
-            \\Flags:        {}
-            \\MetaState:    {}
-            \\ButtonState:  {}
-            \\EdgeFlags:    {}
-            \\DownTime:     {}
-            \\EventTime:    {}
-            \\XOffset:      {}
-            \\YOffset:      {}
-            \\XPrecision:   {}
-            \\YPrecision:   {}
-            \\PointerCount: {}
+            \\  Flags:        {}
+            \\  MetaState:    {}
+            \\  ButtonState:  {}
+            \\  EdgeFlags:    {}
+            \\  DownTime:     {}
+            \\  EventTime:    {}
+            \\  XOffset:      {}
+            \\  YOffset:      {}
+            \\  XPrecision:   {}
+            \\  YPrecision:   {}
+            \\  PointerCount: {}
             \\
         , .{
             event_type,
