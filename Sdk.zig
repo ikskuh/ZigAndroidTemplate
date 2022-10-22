@@ -36,30 +36,18 @@ folders: UserConfig,
 
 versions: ToolchainVersions,
 
-pub const ToolchainSelector = union(enum) {
-    explicit: ToolchainVersions,
-    version: AndroidVersion,
-    default, // target KitKat/Android 4 by default
-};
-
 /// Initializes the android SDK.
 /// It requires some input on which versions of the tool chains should be used
-pub fn init(b: *Builder, user_config: ?UserConfig, target: ToolchainSelector) *Sdk {
-    const versions = switch (target) {
-        .default => AndroidVersion.getToolchains(.android4),
-        .version => |vers| vers.getToolchains(),
-        .explicit => |toolchains| toolchains,
-    };
-
-    const actual_user_config = user_config orelse auto_detect.findUserConfig(b, versions) catch |err| @panic(@errorName(err));
+pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions) *Sdk {
+    const actual_user_config = user_config orelse auto_detect.findUserConfig(b, toolchains) catch |err| @panic(@errorName(err));
 
     const system_tools = blk: {
         const exe = if (builtin.os.tag == .windows) ".exe" else "";
 
-        const zipalign = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", versions.build_tools_version, "zipalign" ++ exe }) catch unreachable;
-        const aapt = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", versions.build_tools_version, "aapt" ++ exe }) catch unreachable;
+        const zipalign = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "zipalign" ++ exe }) catch unreachable;
+        const aapt = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "aapt" ++ exe }) catch unreachable;
         const adb = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "platform-tools", "adb" ++ exe }) catch unreachable;
-        const apksigner = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", versions.build_tools_version, "apksigner" ++ exe }) catch unreachable;
+        const apksigner = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "apksigner" ++ exe }) catch unreachable;
         const keytool = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.java_home, "bin", "keytool" ++ exe }) catch unreachable;
 
         break :blk SystemTools{
@@ -93,59 +81,29 @@ pub fn init(b: *Builder, user_config: ?UserConfig, target: ToolchainSelector) *S
         .host_tools = host_tools,
         .system_tools = system_tools,
         .folders = actual_user_config,
-        .versions = versions,
+        .versions = toolchains,
     };
     return sdk;
 }
 
 pub const ToolchainVersions = struct {
-    android_sdk_version: u16,
-    build_tools_version: []const u8,
-    ndk_version: []const u8,
-
-    pub fn androidSdkString(self: ToolchainVersions, buf: *[5]u8) []u8 {
-        return std.fmt.bufPrint(buf, "{d}", .{self.android_sdk_version}) catch unreachable;
-    }
-
-    pub fn init(sdk: u16, build_tools: []const u8, ndk: []const u8) ToolchainVersions {
-        return ToolchainVersions{
-            .android_sdk_version = sdk,
-            .build_tools_version = build_tools,
-            .ndk_version = ndk,
-        };
-    }
+    build_tools_version: []const u8 = "33.0.0",
+    ndk_version: []const u8 = "25.1.8937393",
 };
 
-pub const AndroidVersion = enum {
-    android4,
-    android5,
-    android6,
-    android7,
-    android8,
-    android9,
-    android10,
-    android11,
-    android12,
-    android13,
+pub const AndroidVersion = enum(u16) {
+    android4 = 19, // KitKat
+    android5 = 21, // Lollipop
+    android6 = 23, // Marshmallow
+    android7 = 24, // Nougat
+    android8 = 26, // Oreo
+    android9 = 28, // Pie
+    android10 = 29, // Quince Tart
+    android11 = 30, // Red Velvet Cake
+    android12 = 31, // Snow Cone
+    android13 = 33, // Tiramisu
 
-    pub fn getToolchains(version: AndroidVersion) ToolchainVersions {
-        const latest_build_tools = "33.0.0";
-        const latest_ndk = "25.1.8937393";
-
-        return switch (version) {
-            // TODO: Android 4 isn't supported by NDK 25.1.8937393. Find last NDK to support android 4
-            .android4 => ToolchainVersions.init(19, latest_build_tools, latest_ndk), // KitKat
-            .android5 => ToolchainVersions.init(21, latest_build_tools, latest_ndk), // Lollipop
-            .android6 => ToolchainVersions.init(23, latest_build_tools, latest_ndk), // Marshmallow
-            .android7 => ToolchainVersions.init(24, latest_build_tools, latest_ndk), // Nougat
-            .android8 => ToolchainVersions.init(26, latest_build_tools, latest_ndk), // Oreo
-            .android9 => ToolchainVersions.init(28, latest_build_tools, latest_ndk), // Pie
-            .android10 => ToolchainVersions.init(29, latest_build_tools, latest_ndk), // Quince Tart
-            .android11 => ToolchainVersions.init(30, latest_build_tools, latest_ndk), // Red Velvet Cake
-            .android12 => ToolchainVersions.init(31, latest_build_tools, latest_ndk), // Snow Cone
-            .android13 => ToolchainVersions.init(33, latest_build_tools, latest_ndk), // Tiramisu
-        };
-    }
+    _, // we allow to overwrite the defaults
 };
 
 pub const UserConfig = struct {
@@ -200,9 +158,8 @@ pub const AppConfig = struct {
     package_name: []const u8,
 
     /// The android version which is embedded in the manifset.
-    /// This is usually the same version as of the SDK that was used, but might also be
-    /// overridden for a specific app.
-    target_sdk_version: ?u16 = null,
+    /// The default is Android 9, it's more than 4 years old by now and should be widespread enough to be a reasonable default.
+    target_version: AndroidVersion = .android9,
 
     /// The resource directory that will contain the manifest and other app resources.
     /// This should be a distinct directory per app.
@@ -254,10 +211,10 @@ pub const SystemTools = struct {
 
 /// The configuration which targets a app should be built for.
 pub const AppTargetConfig = struct {
-    aarch64: bool = true,
-    arm: bool = true, // re-enable when https://github.com/ziglang/zig/issues/8885 is resolved
-    x86_64: bool = true,
-    x86: bool = false,
+    aarch64: ?bool = null,
+    arm: ?bool = null,
+    x86_64: ?bool = null,
+    x86: ?bool = null,
 };
 
 pub const CreateAppStep = struct {
@@ -291,6 +248,128 @@ pub const CreateAppStep = struct {
     }
 };
 
+const NdkVersionRange = struct {
+    ndk: []const u8,
+    min: u16,
+    max: u16,
+
+    pub fn validate(range: []const NdkVersionRange, ndk: []const u8, api: u16) void {
+        const ndk_version = std.SemanticVersion.parse(ndk) catch {
+            std.debug.print("Could not parse NDK version {s} as semantic version. Could not perform NDK validation!\n", .{ndk});
+            return;
+        };
+        std.debug.assert(range.len > 0);
+
+        for (range) |vers| {
+            const r_version = std.SemanticVersion.parse(vers.ndk) catch unreachable;
+            if (ndk_version.order(r_version) == .eq) {
+                // Perfect version match
+                if (api < vers.min) {
+                    std.debug.print("WARNING: Selected NDK {s} does not support api level {d}. Minimum supported version is {d}!\n", .{
+                        ndk,
+                        api,
+                        vers.min,
+                    });
+                }
+                if (api > vers.max) {
+                    std.debug.print("WARNING: Selected NDK {s} does not support api level {d}. Maximum supported version is {d}!\n", .{
+                        ndk,
+                        api,
+                        vers.max,
+                    });
+                }
+            }
+            return;
+        }
+
+        // NDK old    X => min=5, max=8
+        // NDK now    Y => api=7
+        // NDK future Z => min=6, max=13
+
+        var older_version: NdkVersionRange = range[0]; // biggest Y <= X
+        for (range[1..]) |vers| {
+            const r_version = std.SemanticVersion.parse(vers.ndk) catch unreachable;
+            if (r_version.order(ndk_version) != .gt) { // r_version <= ndk_version
+                older_version = vers;
+            } else {
+                // range is ordered, so we know that we can't find anything smaller now anyways
+                break;
+            }
+        }
+        var newer_version: NdkVersionRange = range[range.len - 1]; // smallest Z >= X
+        for (range[1..]) |vers| {
+            const r_version = std.SemanticVersion.parse(vers.ndk) catch unreachable;
+            if (r_version.order(ndk_version) != .lt) {
+                newer_version = vers;
+                break;
+            }
+        }
+
+        // take for max api, as we assume that an older NDK than Z might not support Z.max yet
+        if (api < newer_version.min) {
+            std.debug.print("WARNING: Selected NDK {s} might not support api level {d}. Minimum supported version is guessed as {d}, as NDK {s} only supports that!\n", .{
+                ndk,
+                api,
+                newer_version.min,
+                newer_version.ndk,
+            });
+        }
+        // take for min api, as we assume that a newer NDK than X might not support X.min anymore
+        if (api > older_version.max) {
+            std.debug.print("WARNING: Selected NDK {s} might not support api level {d}. Maximum supported version is guessed as {d}, as NDK {s} only supports that!\n", .{
+                ndk,
+                api,
+                older_version.max,
+                older_version.ndk,
+            });
+        }
+    }
+};
+
+// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/arm-linux-androideabi | code
+const arm_ndk_ranges = [_]NdkVersionRange{
+    NdkVersionRange{ .ndk = "19.2.5345600", .min = 16, .max = 28 },
+    NdkVersionRange{ .ndk = "20.1.5948944", .min = 16, .max = 29 },
+    NdkVersionRange{ .ndk = "21.4.7075529", .min = 16, .max = 30 },
+    NdkVersionRange{ .ndk = "22.1.7171670", .min = 16, .max = 30 },
+    NdkVersionRange{ .ndk = "23.2.8568313", .min = 16, .max = 31 },
+    NdkVersionRange{ .ndk = "24.0.8215888", .min = 19, .max = 32 },
+    NdkVersionRange{ .ndk = "25.1.8937393", .min = 19, .max = 33 },
+};
+
+// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/i686* | code
+const i686_ndk_ranges = [_]NdkVersionRange{
+    NdkVersionRange{ .ndk = "19.2.5345600", .min = 16, .max = 28 },
+    NdkVersionRange{ .ndk = "20.1.5948944", .min = 16, .max = 29 },
+    NdkVersionRange{ .ndk = "21.4.7075529", .min = 16, .max = 30 },
+    NdkVersionRange{ .ndk = "22.1.7171670", .min = 16, .max = 30 },
+    NdkVersionRange{ .ndk = "23.2.8568313", .min = 16, .max = 31 },
+    NdkVersionRange{ .ndk = "24.0.8215888", .min = 19, .max = 32 },
+    NdkVersionRange{ .ndk = "25.1.8937393", .min = 19, .max = 33 },
+};
+
+// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/x86_64-linux-android | code
+const x86_64_ndk_ranges = [_]NdkVersionRange{
+    NdkVersionRange{ .ndk = "19.2.5345600", .min = 21, .max = 28 },
+    NdkVersionRange{ .ndk = "20.1.5948944", .min = 21, .max = 29 },
+    NdkVersionRange{ .ndk = "21.4.7075529", .min = 21, .max = 30 },
+    NdkVersionRange{ .ndk = "22.1.7171670", .min = 21, .max = 30 },
+    NdkVersionRange{ .ndk = "23.2.8568313", .min = 21, .max = 31 },
+    NdkVersionRange{ .ndk = "24.0.8215888", .min = 21, .max = 32 },
+    NdkVersionRange{ .ndk = "25.1.8937393", .min = 21, .max = 33 },
+};
+
+// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android | code
+const aarch64_ndk_ranges = [_]NdkVersionRange{
+    NdkVersionRange{ .ndk = "19.2.5345600", .min = 21, .max = 28 },
+    NdkVersionRange{ .ndk = "20.1.5948944", .min = 21, .max = 29 },
+    NdkVersionRange{ .ndk = "21.4.7075529", .min = 21, .max = 30 },
+    NdkVersionRange{ .ndk = "22.1.7171670", .min = 21, .max = 30 },
+    NdkVersionRange{ .ndk = "23.2.8568313", .min = 21, .max = 31 },
+    NdkVersionRange{ .ndk = "24.0.8215888", .min = 21, .max = 32 },
+    NdkVersionRange{ .ndk = "25.1.8937393", .min = 21, .max = 33 },
+};
+
 /// Instantiates the full build pipeline to create an APK file.
 ///
 pub fn createApp(
@@ -299,7 +378,7 @@ pub fn createApp(
     src_file: []const u8,
     app_config: AppConfig,
     mode: std.builtin.Mode,
-    targets: AppTargetConfig,
+    wanted_targets: AppTargetConfig,
     key_store: KeyStore,
 ) CreateAppStep {
     const write_xml_step = sdk.b.addWriteFile("strings.xml", blk: {
@@ -393,13 +472,33 @@ pub fn createApp(
         .content = write_xml_step.getFileSource("strings.xml").?,
     });
 
-    const sdk_version = sdk.versions.android_sdk_version;
-    const target_sdk_version = app_config.target_sdk_version orelse sdk.versions.android_sdk_version;
+    const sdk_version_int = @enumToInt(app_config.target_version);
+
+    if (sdk_version_int < 16) @panic("Minimum supported sdk version is 16.");
+
+    const targets = AppTargetConfig{
+        .aarch64 = wanted_targets.aarch64 orelse (sdk_version_int >= 21),
+        .x86_64 = wanted_targets.x86_64 orelse (sdk_version_int >= 21),
+        .x86 = wanted_targets.x86 orelse (sdk_version_int >= 16),
+        .arm = wanted_targets.arm orelse (sdk_version_int >= 16),
+    };
+
+    // These are hard assumptions
+    if (targets.aarch64.? and sdk_version_int < 21) @panic("Aarch64 android is only available since sdk version 21.");
+    if (targets.x86_64.? and sdk_version_int < 21) @panic("x86_64 android is only available since sdk version 21.");
+    if (targets.x86.? and sdk_version_int < 16) @panic("x86 android is only available since sdk version 16.");
+    if (targets.arm.? and sdk_version_int < 16) @panic("arm android is only available since sdk version 16.");
+
+    // Also perform a soft check for known NDK versions
+    if (targets.aarch64.?) NdkVersionRange.validate(&aarch64_ndk_ranges, sdk.versions.ndk_version, sdk_version_int);
+    if (targets.x86_64.?) NdkVersionRange.validate(&x86_64_ndk_ranges, sdk.versions.ndk_version, sdk_version_int);
+    if (targets.x86.?) NdkVersionRange.validate(&x86_64_ndk_ranges, sdk.versions.ndk_version, sdk_version_int);
+    if (targets.arm.?) NdkVersionRange.validate(&arm_ndk_ranges, sdk.versions.ndk_version, sdk_version_int);
 
     const root_jar = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{
         sdk.folders.android_sdk_root,
         "platforms",
-        sdk.b.fmt("android-{d}", .{sdk_version}),
+        sdk.b.fmt("android-{d}", .{sdk_version_int}),
         "android.jar",
     }) catch unreachable;
 
@@ -424,7 +523,7 @@ pub fn createApp(
     make_unsigned_apk.addArgs(&[_][]const u8{
         "-v",
         "--target-sdk-version",
-        sdk.b.fmt("{d}", .{target_sdk_version}),
+        sdk.b.fmt("{d}", .{sdk_version_int}),
     });
     for (app_config.asset_directories) |dir| {
         make_unsigned_apk.addArg("-A"); // additional directory in which to find raw asset files
@@ -436,7 +535,7 @@ pub fn createApp(
 
     const build_options = BuildOptionStep.create(sdk.b);
     build_options.add([]const u8, "app_name", app_config.app_name);
-    build_options.add(u16, "android_sdk_version", app_config.target_sdk_version orelse sdk.versions.android_sdk_version);
+    build_options.add(u16, "android_sdk_version", sdk_version_int);
     build_options.add(bool, "fullscreen", app_config.fullscreen);
 
     const align_step = sdk.alignApk(unaligned_apk_file, apk_file);
@@ -446,7 +545,7 @@ pub fn createApp(
 
     inline for (std.meta.fields(AppTargetConfig)) |fld| {
         const target_name = @field(Target, fld.name);
-        if (@field(targets, fld.name)) {
+        if (@field(targets, fld.name).?) {
             const step = sdk.compileAppLibrary(
                 src_file,
                 app_config,
@@ -456,9 +555,10 @@ pub fn createApp(
             );
             libs.append(step) catch unreachable;
 
+            // https://developer.android.com/ndk/guides/abis#native-code-in-app-packages
             const so_dir = switch (target_name) {
                 .aarch64 => "lib/arm64-v8a/",
-                .arm => "lib/armeabi/",
+                .arm => "lib/armeabi-v7a/",
                 .x86_64 => "lib/x86_64/",
                 .x86 => "lib/x86/",
             };
@@ -660,26 +760,31 @@ pub fn compileAppLibrary(
         },
     };
 
-    const lib_dir = sdk.b.fmt("{s}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/{s}/{}/", .{
+    const lib_dir = sdk.b.fmt("{s}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/{s}/{d}/", .{
         ndk_root,
         config.lib_dir,
-        sdk.versions.android_sdk_version,
+        @enumToInt(app_config.target_version),
     });
 
     exe.setTarget(config.target);
     exe.addLibraryPath(lib_dir);
     exe.addIncludePath(std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable);
 
-    exe.setLibCFile(sdk.createLibCFile(config.out_dir, include_dir, include_dir, lib_dir) catch unreachable);
+    exe.setLibCFile(sdk.createLibCFile(app_config.target_version, config.out_dir, include_dir, include_dir, lib_dir) catch unreachable);
     exe.libc_file.?.addStepDependencies(&exe.step);
 
     exe.install();
 
+    // TODO: Remove when https://github.com/ziglang/zig/issues/7935 is resolved:
+    if (exe.target.getCpuArch() == .@"i386") {
+        exe.link_z_notext = true;
+    }
+
     return exe;
 }
 
-fn createLibCFile(sdk: *const Sdk, folder_name: []const u8, include_dir: []const u8, sys_include_dir: []const u8, crt_dir: []const u8) !std.build.FileSource {
-    const fname = sdk.b.fmt("android-{d}-{s}.conf", .{ sdk.versions.android_sdk_version, folder_name });
+fn createLibCFile(sdk: *const Sdk, version: AndroidVersion, folder_name: []const u8, include_dir: []const u8, sys_include_dir: []const u8, crt_dir: []const u8) !std.build.FileSource {
+    const fname = sdk.b.fmt("android-{d}-{s}.conf", .{ @enumToInt(version), folder_name });
 
     var contents = std.ArrayList(u8).init(sdk.b.allocator);
     errdefer contents.deinit();

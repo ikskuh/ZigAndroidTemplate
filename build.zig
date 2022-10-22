@@ -7,8 +7,9 @@ const Sdk = @import("Sdk.zig");
 
 pub fn build(b: *std.build.Builder) !void {
     // Default-initialize SDK
-    const sdk = Sdk.init(b, null, .{ .version = .android5 });
+    const sdk = Sdk.init(b, null, .{});
     const mode = b.standardReleaseOptions();
+    const android_version = b.option(Sdk.AndroidVersion, "android", "Select the android version, default is 'android5'") orelse .android5;
 
     // Provide some KeyStore structure so we can sign our app.
     // Recommendation: Don't hardcore your password here, everyone can read it.
@@ -22,6 +23,8 @@ pub fn build(b: *std.build.Builder) !void {
     // This is a configuration for your application.
     // Android requires several configurations to be done, this is a typical config
     const config = Sdk.AppConfig{
+        .target_version = android_version,
+
         // This is displayed to the user
         .display_name = "Zig Android App Template",
 
@@ -51,10 +54,10 @@ pub fn build(b: *std.build.Builder) !void {
         config,
         mode,
         .{
-            .aarch64 = b.option(bool, "aarch64", "Enable the aarch64 build") orelse true,
-            .arm = b.option(bool, "arm", "Enable the arm build") orelse true,
-            .x86_64 = b.option(bool, "x86_64", "Enable the x86_64 build") orelse true,
-            .x86 = b.option(bool, "x86", "Enable the x86 build") orelse false,
+            .aarch64 = b.option(bool, "aarch64", "Enable the aarch64 build"),
+            .arm = b.option(bool, "arm", "Enable the arm build"),
+            .x86_64 = b.option(bool, "x86_64", "Enable the x86_64 build"),
+            .x86 = b.option(bool, "x86", "Enable the x86 build"),
         }, // default targets
         key_store,
     );

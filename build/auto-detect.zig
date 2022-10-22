@@ -12,7 +12,7 @@ const local_config_file = "android.json";
 const print = std.debug.print;
 
 pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig {
-    var str_buf: [5]u8 = undefined;
+    // var str_buf: [5]u8 = undefined;
 
     var config = UserConfig{};
     var config_dirty: bool = false;
@@ -354,7 +354,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         print("\nCould not find all needed tools. Please edit {s} to specify their paths.\n\n", .{local_config_path});
         if (config.android_sdk_root.len == 0) {
             print("Android SDK root is missing. Edit the config file, or set ANDROID_SDK_ROOT to your android install.\n", .{});
-            print("You will need build tools version {s} and android sdk platform {s}\n\n", .{ versions.build_tools_version, versions.androidSdkString(&str_buf) });
+            print("You will need build tools version {s} and android sdk platform {s}\n\n", .{ versions.build_tools_version, "TODO: ???" });
         }
         if (config.android_ndk_root.len == 0) {
             print("Android NDK root is missing. Edit the config file, or set ANDROID_NDK_ROOT to your android NDK install.\n", .{});
@@ -432,18 +432,18 @@ fn findProblemWithAndroidSdk(b: *Builder, versions: Sdk.ToolchainVersions, path:
         }
     };
 
-    var str_buf: [5]u8 = undefined;
-    const android_version_str = versions.androidSdkString(&str_buf);
+    // var str_buf: [5]u8 = undefined;
+    // const android_version_str = "TODO: ???"; // versions.androidSdkString(&str_buf);
 
-    const platforms = pathConcat(b, path, "platforms");
-    const platform_version = pathConcat(b, platforms, b.fmt("android-{d}", .{versions.android_sdk_version}));
-    std.fs.cwd().access(platform_version, .{}) catch |err| {
-        if (err == error.FileNotFound) {
-            return b.fmt("Missing android platform version {s}", .{android_version_str});
-        } else {
-            return b.fmt("Cannot access platforms/android-{s}, {s}", .{ android_version_str, @errorName(err) });
-        }
-    };
+    // const platforms = pathConcat(b, path, "platforms");
+    // const platform_version = pathConcat(b, platforms, b.fmt("android-{d}", .{versions.android_sdk_version}));
+    // std.fs.cwd().access(platform_version, .{}) catch |err| {
+    //     if (err == error.FileNotFound) {
+    //         return b.fmt("Missing android platform version {s}", .{android_version_str});
+    //     } else {
+    //         return b.fmt("Cannot access platforms/android-{s}, {s}", .{ android_version_str, @errorName(err) });
+    //     }
+    // };
 
     return null;
 }

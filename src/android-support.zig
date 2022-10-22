@@ -32,12 +32,26 @@ export fn ANativeActivity_onCreate(activity: *android.ANativeActivity, savedStat
         }
     }
 
-    app_log.debug("Starting on Android Version {}\nApp pid: {}\nABI: {s}-{s}-{s}", .{
+    app_log.debug(
+        \\Zig Android SDK:
+        \\  App:              {s}
+        \\  API level:        target={d}, actual={d}
+        \\  App pid:          {}
+        \\  Build mode:       {s}
+        \\  ABI:              {s}-{s}-{s}
+        \\  Compiler version: {}
+        \\  Compiler backend: {s}
+    , .{
+        build_options.app_name,
         sdk_version,
+        build_options.android_sdk_version,
         std.os.linux.getpid(),
+        @tagName(builtin.mode),
         @tagName(builtin.cpu.arch),
         @tagName(builtin.os.tag),
         @tagName(builtin.abi),
+        builtin.zig_version,
+        @tagName(builtin.zig_backend),
     });
 
     const app = std.heap.c_allocator.create(AndroidApp) catch {
