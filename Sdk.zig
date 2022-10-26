@@ -502,7 +502,11 @@ pub fn createApp(
         "android.jar",
     }) catch unreachable;
 
-    const unaligned_apk_file = sdk.b.fmt("unaligned-{s}", .{apk_file});
+    const unaligned_apk_file = sdk.b.pathJoin(&.{
+        sdk.b.build_root,
+        sdk.b.cache_root,
+        sdk.b.fmt("unaligned-{s}", .{std.fs.path.basename(apk_file)}),
+    });
 
     const make_unsigned_apk = sdk.b.addSystemCommand(&[_][]const u8{
         sdk.system_tools.aapt,
