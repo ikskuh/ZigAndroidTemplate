@@ -720,9 +720,6 @@ pub fn compileAppLibrary(
 
     exe.defineCMacro("ANDROID", null);
 
-    const include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ ndk_root, "toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include" }) catch unreachable;
-    exe.addIncludePath(include_dir);
-
     exe.linkLibC();
     for (app_libs) |lib| {
         exe.linkSystemLibraryName(lib);
@@ -770,11 +767,18 @@ pub fn compileAppLibrary(
         @enumToInt(app_config.target_version),
     });
 
+    const include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ ndk_root, "toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include" }) catch unreachable;
+    const system_include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable;
+
+    // exe.addIncludePath(include_dir);
+
     exe.setTarget(config.target);
     exe.addLibraryPath(lib_dir);
-    exe.addIncludePath(std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable);
 
-    exe.setLibCFile(sdk.createLibCFile(app_config.target_version, config.out_dir, include_dir, include_dir, lib_dir) catch unreachable);
+    // exe.addIncludePath(include_dir);
+    // exe.addIncludePath(system_include_dir);
+
+    exe.setLibCFile(sdk.createLibCFile(app_config.target_version, config.out_dir, include_dir, system_include_dir, lib_dir) catch unreachable);
     exe.libc_file.?.addStepDependencies(&exe.step);
 
     exe.install();
@@ -795,8 +799,15 @@ fn createLibCFile(sdk: *const Sdk, version: AndroidVersion, folder_name: []const
 
     var writer = contents.writer();
 
+    //  The directory that contains `stdlib.h`.
+    //  On POSIX-like systems, include directories be found with: `cc -E -Wp,-v -xc /dev/null
     try writer.print("include_dir={s}\n", .{include_dir});
+
+    // The system-specific include directory. May be the same as `include_dir`.
+    // On Windows it's the directory that includes `vcruntime.h`.
+    // On POSIX it's the directory that includes `sys/errno.h`.
     try writer.print("sys_include_dir={s}\n", .{sys_include_dir});
+
     try writer.print("crt_dir={s}\n", .{crt_dir});
     try writer.writeAll("msvc_lib_dir=\n");
     try writer.writeAll("kernel32_lib_dir=\n");
