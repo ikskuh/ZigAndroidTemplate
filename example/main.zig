@@ -248,7 +248,7 @@ pub const AndroidApp = struct {
             defer jni.deinit();
 
             // Show/Hide keyboard
-            _ = jni.AndroidDisplayKeyboard(true);
+            // _ = jni.AndroidDisplayKeyboard(true);
 
             // this allows you to send the app in the background
             // const success = jni.AndroidSendToBack(true);
@@ -370,7 +370,22 @@ pub const AndroidApp = struct {
         var uAspect: c.GLint = undefined;
         var uIntensity: c.GLint = undefined;
 
+        var vPosition: c.GLuint = undefined;
+
         var uTransform: c.GLint = undefined;
+
+        var mesh_vPosition: c.GLuint = undefined;
+        var mesh_vNormal: c.GLuint = undefined;
+
+        var touch_buffer: c.GLuint = undefined;
+        var mesh_buffer: c.GLuint = undefined;
+
+        const vVertices = [_]c.GLfloat{
+            0.0, 0.0,
+            1.0, 0.0,
+            0.0, 1.0,
+            1.0, 1.0,
+        };
 
         while (@atomicLoad(bool, &self.running, .SeqCst)) {
 
@@ -413,6 +428,7 @@ pub const AndroidApp = struct {
                     try egl.makeCurrent();
 
                     if (self.egl_init) {
+                        enableDebug();
                         app_log.info(
                             \\GL Vendor:     {s}
                             \\GL Renderer:   {s}
@@ -441,12 +457,12 @@ pub const AndroidApp = struct {
                                 \\
                             ;
                             var fs_code =
-                                \\varying vec2 uv;
-                                \\uniform vec2 uPos;
-                                \\uniform float uAspect;
-                                \\uniform float uIntensity;
+                                \\varying highp vec2 uv;
+                                \\uniform highp vec2 uPos;
+                                \\uniform highp float uAspect;
+                                \\uniform highp float uIntensity;
                                 \\void main() {
-                                \\  vec2 rel = uv - uPos;
+                                \\  highp vec2 rel = uv - uPos;
                                 \\  rel.x *= uAspect;
                                 \\  gl_FragColor = vec4(vec3(pow(uIntensity * clamp(1.0 - 10.0 * length(rel), 0.0, 1.0), 2.2)), 1.0);
                                 \\}
@@ -459,19 +475,41 @@ pub const AndroidApp = struct {
                             c.glCompileShader(ps);
                             c.glCompileShader(fs);
 
+                            glCheckError(ps);
+                            glCheckError(fs);
+
                             c.glAttachShader(touch_program, ps);
                             c.glAttachShader(touch_program, fs);
 
+                            glShaderInfoLog(ps);
+                            glShaderInfoLog(fs);
+
                             c.glBindAttribLocation(touch_program, 0, "vPosition");
+                            // c.glBindAttribLocation(touch_program, 1, "uv");
                             c.glLinkProgram(touch_program);
+
+                            glCheckError(touch_program);
 
                             c.glDetachShader(touch_program, ps);
                             c.glDetachShader(touch_program, fs);
+
+                            glProgramInfoLog(touch_program);
                         }
 
+                        // Get uniform locations
                         uPos = c.glGetUniformLocation(touch_program, "uPos");
                         uAspect = c.glGetUniformLocation(touch_program, "uAspect");
                         uIntensity = c.glGetUniformLocation(touch_program, "uIntensity");
+
+                        // Get attrib locations
+                        const vPosition_res = c.glGetAttribLocation(touch_program, "vPosition");
+                        app_log.info("vPosition: {}", .{vPosition_res});
+                        vPosition = @intCast(c.GLuint, vPosition_res);
+
+                        // Bind the vertices to the buffer
+                        c.glGenBuffers(1, &touch_buffer);
+                        c.glBindBuffer(c.GL_ARRAY_BUFFER, touch_buffer);
+                        c.glBufferData(c.GL_ARRAY_BUFFER, @intCast(isize, vVertices[0..].len * @sizeOf(c.GLfloat)), vVertices[0..], c.GL_STATIC_DRAW);
 
                         shaded_program = c.glCreateProgram();
                         {
@@ -479,6 +517,7 @@ pub const AndroidApp = struct {
                             var fs = c.glCreateShader(c.GL_FRAGMENT_SHADER);
 
                             var ps_code =
+                                \\#version 100
                                 \\attribute vec3 vPosition;
                                 \\attribute vec3 vNormal;
                                 \\uniform mat4 uTransform;
@@ -490,11 +529,12 @@ pub const AndroidApp = struct {
                                 \\
                             ;
                             var fs_code =
-                                \\varying vec3 normal;
+                                \\#version 100
+                                \\varying highp vec3 normal;
                                 \\void main() {
-                                \\  vec3 base_color = vec3(0.968,0.643,0.113); // #F7A41D
-                                \\  vec3 ldir = normalize(vec3(0.3, 0.4, 2.0));
-                                \\  float l = 0.3 + 0.8 * clamp(-dot(normal, ldir), 0.0, 1.0);
+                                \\  highp vec3 base_color = vec3(0.968,0.643,0.113); // #F7A41D
+                                \\  highp vec3 ldir = normalize(vec3(0.3, 0.4, 2.0));
+                                \\  highp float l = 0.3 + 0.8 * clamp(-dot(normal, ldir), 0.0, 1.0);
                                 \\  gl_FragColor = vec4(l * base_color,1);
                                 \\}
                                 \\
@@ -506,6 +546,9 @@ pub const AndroidApp = struct {
                             c.glCompileShader(ps);
                             c.glCompileShader(fs);
 
+                            glShaderInfoLog(ps);
+                            glShaderInfoLog(fs);
+
                             c.glAttachShader(shaded_program, ps);
                             c.glAttachShader(shaded_program, fs);
 
@@ -515,15 +558,31 @@ pub const AndroidApp = struct {
 
                             c.glDetachShader(shaded_program, ps);
                             c.glDetachShader(shaded_program, fs);
+
+                            glProgramInfoLog(shaded_program);
                         }
 
                         uTransform = c.glGetUniformLocation(shaded_program, "uTransform");
+
+                        // Get attrib locations
+                        const mesh_vPosition_res = c.glGetAttribLocation(shaded_program, "vPosition");
+                        app_log.info("mesh_vPosition: {}", .{mesh_vPosition_res});
+                        mesh_vPosition = @intCast(c.GLuint, mesh_vPosition_res);
+                        const mesh_vNormal_res = c.glGetAttribLocation(shaded_program, "vNormal");
+                        app_log.info("mesh_vNormal: {}", .{mesh_vNormal_res});
+                        mesh_vNormal = @intCast(c.GLuint, mesh_vNormal_res);
+
+                        // Bind the vertices to the buffer
+                        c.glGenBuffers(1, &mesh_buffer);
+                        c.glBindBuffer(c.GL_ARRAY_BUFFER, mesh_buffer);
+                        c.glBufferData(c.GL_ARRAY_BUFFER, @intCast(isize, mesh.len * @sizeOf(MeshVertex)), &mesh, c.GL_STATIC_DRAW);
 
                         self.egl_init = false;
                     }
 
                     const t = @intToFloat(f32, loop) / 100.0;
 
+                    // Clear the screen
                     c.glClearColor(
                         0.5 + 0.5 * @sin(t + 0.0),
                         0.5 + 0.5 * @sin(t + 1.0),
@@ -532,18 +591,15 @@ pub const AndroidApp = struct {
                     );
                     c.glClear(c.GL_COLOR_BUFFER_BIT);
 
+                    // -- Start touch display code
                     c.glUseProgram(touch_program);
 
-                    const vVertices = [_]c.GLfloat{
-                        0.0, 0.0,
-                        1.0, 0.0,
-                        0.0, 1.0,
-                        1.0, 1.0,
-                    };
+                    c.glBindBuffer(c.GL_ARRAY_BUFFER, touch_buffer);
 
-                    c.glVertexAttribPointer(0, 2, c.GL_FLOAT, c.GL_FALSE, 0, &vVertices);
-                    c.glEnableVertexAttribArray(0);
-                    c.glDisableVertexAttribArray(1);
+                    c.glEnableVertexAttribArray(vPosition);
+                    c.glVertexAttribPointer(vPosition, 2, c.GL_FLOAT, c.GL_FALSE, 0, @intToPtr(?*anyopaque, 0));
+
+                    // c.glDisableVertexAttribArray(1);
 
                     c.glDisable(c.GL_DEPTH_TEST);
                     c.glEnable(c.GL_BLEND);
@@ -563,12 +619,15 @@ pub const AndroidApp = struct {
                             }
                         }
                     }
+                    glDrainErrors();
 
-                    c.glEnableVertexAttribArray(0);
-                    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(MeshVertex), &mesh[0].pos);
+                    // -- Start 3d zig logo code
+                    c.glBindBuffer(c.GL_ARRAY_BUFFER, mesh_buffer);
+                    c.glEnableVertexAttribArray(mesh_vPosition);
+                    c.glVertexAttribPointer(mesh_vPosition, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(MeshVertex), @intToPtr(?*anyopaque, @offsetOf(MeshVertex, "pos")));
 
-                    c.glEnableVertexAttribArray(1);
-                    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(MeshVertex), &mesh[0].normal);
+                    c.glEnableVertexAttribArray(mesh_vNormal);
+                    c.glVertexAttribPointer(mesh_vNormal, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(MeshVertex), @intToPtr(?*anyopaque, @offsetOf(MeshVertex, "normal")));
 
                     c.glUseProgram(shaded_program);
 
@@ -595,6 +654,8 @@ pub const AndroidApp = struct {
                     c.glUniformMatrix4fv(uTransform, 1, c.GL_FALSE, @ptrCast([*]const f32, &matrix));
 
                     c.glDrawArrays(c.GL_TRIANGLES, 0, mesh.len);
+
+                    glDrainErrors();
 
                     try egl.swapBuffers();
                 }
@@ -665,3 +726,86 @@ const mesh = blk: {
 
     break :blk array;
 };
+
+pub fn glProgramInfoLog(program: c.GLuint) void {
+    var buffer: [4096]u8 = undefined;
+    var size: c.GLsizei = undefined;
+    c.glGetProgramInfoLog(program, 4096, &size, &buffer);
+    if (size == 0) return;
+    app_log.info("{s}", .{buffer[0..@intCast(usize, size)]});
+}
+
+pub fn glShaderInfoLog(shader: c.GLuint) void {
+    var buffer: [4096]u8 = undefined;
+    var size: c.GLsizei = undefined;
+    c.glGetShaderInfoLog(shader, 4096, &size, &buffer);
+    if (size == 0) return;
+    app_log.info("{s}", .{buffer[0..@intCast(usize, size)]});
+}
+
+pub fn glCheckError(res: i64) void {
+    switch (res) {
+        c.GL_INVALID_ENUM => app_log.err("GL error code {}: Invalid enum", .{res}),
+        c.GL_INVALID_VALUE => app_log.err("GL error code {}: Invalid value", .{res}),
+        c.GL_INVALID_OPERATION => app_log.err("GL error code {}: Invalid operation", .{res}),
+        // c.GL_STACK_OVERFLOW => app_log.err("GL error code {}: Stack overflow", .{res}),
+        // c.GL_STACK_UNDERFLOW => app_log.err("GL error code {}: Stack underflow", .{res}),
+        c.GL_OUT_OF_MEMORY => app_log.err("GL error code {}: Out of memory", .{res}),
+        // c.GL_TABLE_TOO_LARGE => app_log.err("GL error code {}: Table too large", .{res}),
+        c.GL_NO_ERROR => {},
+        else => {},
+    }
+}
+
+pub fn glDrainErrors() void {
+    var res = c.glGetError();
+    while (res != c.GL_NO_ERROR) : (res = c.glGetError()) {
+        glCheckError(res);
+    }
+}
+
+pub fn enableDebug() void {
+    const extensions = std.mem.span(c.glGetString(c.GL_EXTENSIONS));
+    if (std.mem.indexOf(u8, extensions, "GL_KHR_debug") != null) {
+        c.glEnable(c.GL_DEBUG_OUTPUT_KHR);
+        c.glEnable(c.GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR);
+
+        const glDebugMessageControl = @ptrCast(c.PFNGLDEBUGMESSAGECONTROLKHRPROC, c.eglGetProcAddress("glDebugMessageControl")).?;
+        glDebugMessageControl(c.GL_DONT_CARE, c.GL_DONT_CARE, c.GL_DEBUG_SEVERITY_NOTIFICATION_KHR, 0, null, c.GL_TRUE);
+
+        const glDebugMessageCallback = @ptrCast(c.PFNGLDEBUGMESSAGECALLBACKKHRPROC, c.eglGetProcAddress("glDebugMessageCallback")).?;
+        glDebugMessageCallback(debugMessageCallback, null);
+    } else {
+        app_log.err("Debug is not supported.", .{});
+    }
+}
+
+pub fn debugMessageCallback(
+    source: c.GLenum,
+    logtype: c.GLenum,
+    id: c.GLuint,
+    severity: c.GLenum,
+    length: c.GLsizei,
+    message_c: ?[*]const c.GLchar,
+    user_param: ?*const anyopaque,
+) callconv(.C) void {
+    _ = user_param;
+    const message = message: {
+        if (message_c) |message_ptr| {
+            break :message if (length > 0) message_ptr[0..@intCast(usize, length)] else "";
+        } else {
+            break :message "";
+        }
+    };
+    const logtype_str = switch (logtype) {
+        c.GL_DEBUG_TYPE_ERROR_KHR => "Error",
+        c.GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR => "Deprecated Behavior",
+        c.GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR => "Undefined Behavior",
+        c.GL_DEBUG_TYPE_PORTABILITY_KHR => "Portability",
+        c.GL_DEBUG_TYPE_PERFORMANCE_KHR => "Performance",
+        c.GL_DEBUG_TYPE_OTHER_KHR => "Other",
+        c.GL_DEBUG_TYPE_MARKER_KHR => "Marker",
+        else => "Unknown/invalid type"
+    };
+    app_log.err("source = {}, type = {s}, id = {}, severity = {}, message = {s}", .{ source, logtype_str, id, severity, message });
+}
