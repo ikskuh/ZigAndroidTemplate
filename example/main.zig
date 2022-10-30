@@ -49,7 +49,7 @@ pub const AndroidApp = struct {
     screen_width: f32 = undefined,
     screen_height: f32 = undefined,
 
-    audio_engine: audio.AudioEngine = .{},
+    // audio_engine: audio.AudioEngine = .{},
 
     /// This is the entry point which initializes a application
     /// that has stored its previous state.
@@ -221,9 +221,9 @@ pub const AndroidApp = struct {
         std.debug.assert(point.index != null);
         var oldest: *TouchPoint = undefined;
 
-        if (point.index) |index| {
-            self.audio_engine.setToneOn(@intCast(usize, index), true);
-        }
+        // if (point.index) |index| {
+        //     self.audio_engine.setToneOn(@intCast(usize, index), true);
+        // }
 
         for (self.touch_points) |*opt, i| {
             if (opt.*) |*pt| {
@@ -369,11 +369,18 @@ pub const AndroidApp = struct {
         }
 
         // Audio
-        self.audio_engine = audio.AudioEngine{};
-        if (!self.audio_engine.start()) {
-            app_log.info("Couldn't start audio engine", .{});
-        }
-        defer _ = self.audio_engine.stop();
+        // self.audio_engine = audio.AudioEngine{};
+        // if (!self.audio_engine.start()) {
+        //     app_log.info("Couldn't start audio engine", .{});
+        // }
+        // defer _ = self.audio_engine.stop();
+        audio.OpenSL.init() catch |e| {
+            app_log.err("OpenSL init error: {s}", .{@errorName(e)});
+        };
+        audio.OpenSL.play_test() catch |e| {
+            app_log.err("OpenSL play_test error: {s}", .{@errorName(e)});
+        };
+        defer audio.OpenSL.deinit();
 
         // Graphics
         const GLuint = c.GLuint;
@@ -629,9 +636,9 @@ pub const AndroidApp = struct {
 
                             point.intensity -= 0.05;
                             if (point.intensity <= 0.0) {
-                                if (point.index) |index| {
-                                    self.audio_engine.setToneOn(@intCast(usize, index), false);
-                                }
+                                // if (point.index) |index| {
+                                //     self.audio_engine.setToneOn(@intCast(usize, index), false);
+                                // }
                                 pt.* = null;
                             }
                         }
