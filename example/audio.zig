@@ -185,6 +185,10 @@ pub const OpenSL = struct {
         phaseIncrement: f64 = 0,
         frequency: f64 = 440,
         amplitude: f64 = 0.1,
+
+        fn setSampleRate(self: *@This(), sample_rate: i32) void {
+            self.phaseIncrement = (std.math.tau * self.frequency) / @intToFloat(f64, sample_rate);
+        }
     };
 
     pub fn bufferQueueCallback(queue_itf: c.SLBufferQueueItf, user_data: ?*anyopaque) callconv(.C) void {
@@ -192,9 +196,14 @@ pub const OpenSL = struct {
         var context = @ptrCast(*CallbackContext, @alignCast(@alignOf(CallbackContext), user_data));
         if (context.data_index < context.data_base.len) {
             var buffer = context.data_base[context.data_index..audio_data_storage_size];
-            for (buffer) |*sample| {
-                sample.* = 0;
-                sample.* +|= @floatToInt(i16, (std.math.sin(context.phase) * context.amplitude));
+            var i: usize = 0;
+            while (i < buffer.len) {
+                buffer[i] = 0;
+                buffer[i] +|= @floatToInt(i16, (std.math.sin(context.phase) * context.amplitude * (std.math.maxInt(i16))));
+                i += 1;
+                buffer[i] = 0;
+                buffer[i] +|= @floatToInt(i16, (std.math.sin(context.phase) * context.amplitude * (std.math.maxInt(i16))));
+                i += 1;
                 context.phase += context.phaseIncrement;
                 if (context.phase > std.math.tau) context.phase -= std.math.tau;
             }
@@ -202,6 +211,7 @@ pub const OpenSL = struct {
                 app_log.err("Error enqueueing buffer! {s}", .{@errorName(e)});
             };
             context.data_index += audio_data_buffer_size;
+            if (context.data_index >= context.data_base.len) context.data_index = 0;
         }
     }
 
@@ -338,6 +348,21 @@ pub const OpenSL = struct {
         }
     }
 
+    fn printEngineExtensions() !void {
+        var extension_count: c.SLuint32 = undefined;
+        try checkResult(engine.*.*.QueryNumSupportedExtensions.?(engine, &extension_count));
+        {
+            var i: c.SLuint32 = 0;
+            while (i < extension_count) : (i += 1) {
+                var extension_ptr: [4096]u8 = undefined;
+                var extension_size: c.SLint16 = 4096;
+                try checkResult(engine.*.*.QuerySupportedExtension.?(engine, i, &extension_ptr, &extension_size));
+                var extension_name = extension_ptr[0..@intCast(usize, extension_size)];
+                app_log.info("OpenSL engine extension {}: {s}", .{ i, extension_name });
+            }
+        }
+    }
+
     fn printEngineInterfaces() !void {
         var interface_count: c.SLuint32 = undefined;
         try checkResult(engine.*.*.QueryNumSupportedInterfaces.?(engine, c.SL_OBJECTID_ENGINE, &interface_count));
@@ -372,6 +397,7 @@ pub const OpenSL = struct {
             // Get engine interface
             try checkResult(engine_object.*.*.GetInterface.?(engine_object, c.SL_IID_ENGINE, @ptrCast(*anyopaque, &engine)));
             try printEngineInterfaces();
+            try printEngineExtensions();
         }
     }
 
@@ -416,16 +442,13 @@ pub const OpenSL = struct {
         try checkResult(output_mix.*.*.Realize.?(output_mix, c.SL_BOOLEAN_FALSE));
         app_log.info("Realized output mix", .{});
         defer output_mix.*.*.Destroy.?(output_mix);
-        // Get Volume interface
-        // try checkResult(output_mix.*.*.GetInterface.?(output_mix, c.SL_IID_VOLUME, @ptrCast(*anyopaque, &volume_itf)));
-        // app_log.info("Created volume", .{});
 
         buffer_queue.locatorType = c.SL_DATALOCATOR_BUFFERQUEUE;
         buffer_queue.numBuffers = 4;
 
         // Setup the format of the content in the buffer queue
         pcm.formatType = c.SL_DATAFORMAT_PCM;
-        pcm.numChannels = 2;
+        pcm.numChannels = 1;
         pcm.samplesPerSec = c.SL_SAMPLINGRATE_44_1;
         pcm.bitsPerSample = c.SL_PCMSAMPLEFORMAT_FIXED_16;
         pcm.containerSize = 16;
@@ -448,6 +471,7 @@ pub const OpenSL = struct {
             .data_base = pcm_data[0..],
             .data_index = 0,
         };
+        context.setSampleRate(44100);
 
         // Set arrays required and iid_array for SEEK interface (PlayItf is implicit)
         required[0] = c.SL_BOOLEAN_TRUE;
@@ -465,8 +489,6 @@ pub const OpenSL = struct {
         app_log.info("got buffer queue interface", .{});
         try checkResult(buffer_queue_itf.*.*.RegisterCallback.?(buffer_queue_itf, bufferQueueCallback, @ptrCast(*anyopaque, &context))); // Register callback
         app_log.info("registered callback", .{});
-        // try checkResult(volume_itf.*.*.SetVolumeLevel.?(volume_itf, -300)); // Set volume to -3dB (-300mB)
-        // app_log.info("set volume level", .{});
 
         // Enqueue a few buffers to get the ball rollng
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
