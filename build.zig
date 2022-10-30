@@ -49,7 +49,7 @@ pub fn build(b: *std.build.Builder) !void {
 
         // This is a list of native android apis to link against.
         .libraries = &[_][]const u8{
-            "GLESv2", "EGL", "android", "log", "aaudio",
+            "GLESv2", "EGL", "android", "log", "aaudio", "OpenSLES"
         },
     };
 
