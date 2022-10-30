@@ -2,6 +2,7 @@ const std = @import("std");
 
 const android = @import("android");
 
+const audio = @import("audio.zig");
 pub const panic = android.panic;
 pub const log = android.log;
 
@@ -47,6 +48,8 @@ pub const AndroidApp = struct {
     touch_points: [16]?TouchPoint = [1]?TouchPoint{null} ** 16,
     screen_width: f32 = undefined,
     screen_height: f32 = undefined,
+
+    audio_engine: audio.AudioEngine = .{},
 
     /// This is the entry point which initializes a application
     /// that has stored its previous state.
@@ -218,6 +221,10 @@ pub const AndroidApp = struct {
         std.debug.assert(point.index != null);
         var oldest: *TouchPoint = undefined;
 
+        if (point.index) |index| {
+            self.audio_engine.setToneOn(@intCast(usize, index), true);
+        }
+
         for (self.touch_points) |*opt, i| {
             if (opt.*) |*pt| {
                 if (pt.index != null and pt.index.? == point.index.?) {
@@ -361,6 +368,14 @@ pub const AndroidApp = struct {
             printConfig(cfg);
         }
 
+        // Audio
+        self.audio_engine = audio.AudioEngine{};
+        if (!self.audio_engine.start()) {
+            app_log.info("Couldn't start audio engine", .{});
+        }
+        defer _ = self.audio_engine.stop();
+
+        // Graphics
         const GLuint = c.GLuint;
 
         var touch_program: GLuint = undefined;
@@ -485,7 +500,6 @@ pub const AndroidApp = struct {
                             glShaderInfoLog(fs);
 
                             c.glBindAttribLocation(touch_program, 0, "vPosition");
-                            // c.glBindAttribLocation(touch_program, 1, "uv");
                             c.glLinkProgram(touch_program);
 
                             glCheckError(touch_program);
@@ -615,6 +629,9 @@ pub const AndroidApp = struct {
 
                             point.intensity -= 0.05;
                             if (point.intensity <= 0.0) {
+                                if (point.index) |index| {
+                                    self.audio_engine.setToneOn(@intCast(usize, index), false);
+                                }
                                 pt.* = null;
                             }
                         }
@@ -805,7 +822,7 @@ pub fn debugMessageCallback(
         c.GL_DEBUG_TYPE_PERFORMANCE_KHR => "Performance",
         c.GL_DEBUG_TYPE_OTHER_KHR => "Other",
         c.GL_DEBUG_TYPE_MARKER_KHR => "Marker",
-        else => "Unknown/invalid type"
+        else => "Unknown/invalid type",
     };
     app_log.err("source = {}, type = {s}, id = {}, severity = {}, message = {s}", .{ source, logtype_str, id, severity, message });
 }

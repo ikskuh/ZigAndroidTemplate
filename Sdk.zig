@@ -186,6 +186,8 @@ pub const AppConfig = struct {
         //"android.permission.SET_RELEASE_APP",
         //"android.permission.RECORD_AUDIO",
     },
+
+    libraries: []const []const u8 = &app_libs,
 };
 
 /// One of the legal targets android can be built for.
@@ -730,7 +732,7 @@ pub fn compileAppLibrary(
     exe.defineCMacro("ANDROID", null);
 
     exe.linkLibC();
-    for (app_libs) |lib| {
+    for (app_config.libraries) |lib| {
         exe.linkSystemLibraryName(lib);
     }
 
@@ -991,7 +993,7 @@ const zig_targets = struct {
 };
 
 const app_libs = [_][]const u8{
-    "GLESv2", "EGL", "android", "log",
+    "GLESv2", "EGL", "android", "log", "aaudio"
 };
 
 const BuildOptionStep = struct {
