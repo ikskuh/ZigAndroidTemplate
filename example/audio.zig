@@ -157,8 +157,8 @@ pub const OpenSL = struct {
 
     var player: c.SLObjectItf = undefined;
     var play_itf: c.SLPlayItf = undefined;
-    var buffer_queue_itf: c.SLBufferQueueItf = undefined;
-    var state: c.SLBufferQueueState = undefined;
+    var buffer_queue_itf: c.SLAndroidSimpleBufferQueueItf = undefined;
+    var state: c.SLAndroidSimpleBufferQueueState = undefined;
 
     var audio_sink: c.SLDataSink = undefined;
     var locator_outputmix: c.SLDataLocator_OutputMix = undefined;
@@ -181,26 +181,38 @@ pub const OpenSL = struct {
         data_base: []c.SLint16,
         /// Current location in local audio data storage
         data_index: usize,
+        last_played_buffer: usize = 0,
         phase: f64 = 0.0,
         phaseIncrement: f64 = 0,
         frequency: f64 = 440,
         amplitude: f64 = 0.1,
+        mutex: std.Thread.Mutex,
 
         fn setSampleRate(self: *@This(), sample_rate: i32) void {
             self.phaseIncrement = (std.math.tau * self.frequency) / @intToFloat(f64, sample_rate);
         }
     };
 
-    pub fn bufferQueueCallback(queue_itf: c.SLBufferQueueItf, user_data: ?*anyopaque) callconv(.C) void {
-        app_log.info("buffer queue callback", .{});
+    pub fn bufferQueueCallback(queue_itf: c.SLAndroidSimpleBufferQueueItf, user_data: ?*anyopaque) callconv(.C) void {
+        // app_log.info("buffer queue callback", .{});
         var context = @ptrCast(*CallbackContext, @alignCast(@alignOf(CallbackContext), user_data));
+        context.mutex.lock();
+        defer context.mutex.unlock();
+        var queue_state: c.SLAndroidSimpleBufferQueueState = undefined;
+        checkResult(queue_itf.*.*.GetState.?(queue_itf, &queue_state)) catch |e| {
+            app_log.err("Error getting buffer state! {s}", .{@errorName(e)});
+        };
+        app_log.err("Index: {}, Count: {}", .{ queue_state.index, queue_state.count });
+        // const position = (context.data_index - (context.data_index % audio_data_buffer_size)) / audio_data_buffer_size;
+        while (queue_state.count > 6) {
+            checkResult(queue_itf.*.*.GetState.?(queue_itf, &queue_state)) catch |e| {
+                app_log.err("Error getting buffer state! {s}", .{@errorName(e)});
+            };
+        }
         if (context.data_index < context.data_base.len) {
-            var buffer = context.data_base[context.data_index..audio_data_storage_size];
+            var buffer = context.data_base[context.data_index..context.data_index + audio_data_buffer_size];
             var i: usize = 0;
             while (i < buffer.len) {
-                buffer[i] = 0;
-                buffer[i] +|= @floatToInt(i16, (std.math.sin(context.phase) * context.amplitude * (std.math.maxInt(i16))));
-                i += 1;
                 buffer[i] = 0;
                 buffer[i] +|= @floatToInt(i16, (std.math.sin(context.phase) * context.amplitude * (std.math.maxInt(i16))));
                 i += 1;
@@ -210,8 +222,8 @@ pub const OpenSL = struct {
             checkResult(queue_itf.*.*.Enqueue.?(queue_itf, @ptrCast(*anyopaque, buffer.ptr), @intCast(c.SLuint32, 2 * buffer.len))) catch |e| {
                 app_log.err("Error enqueueing buffer! {s}", .{@errorName(e)});
             };
-            context.data_index += audio_data_buffer_size;
-            if (context.data_index >= context.data_base.len) context.data_index = 0;
+            context.data_index = (context.data_index + audio_data_buffer_size) % context.data_base.len;
+            // if (context.data_index >= context.data_base.len) context.data_index = 0;
         }
     }
 
@@ -423,8 +435,14 @@ pub const OpenSL = struct {
 
     pub fn play_test() !void {
         if (thread == null) {
-            thread = try std.Thread.spawn(.{}, play_thread, .{});
+            thread = try std.Thread.spawn(.{}, play_thread_handler, .{});
         }
+    }
+
+    pub fn play_thread_handler() !void {
+        play_thread() catch |e| {
+            app_log.info("play_test error: {s}", .{@errorName(e)});
+        };
     }
 
     pub fn play_thread() !void {
@@ -433,15 +451,24 @@ pub const OpenSL = struct {
         var required: [max_interfaces]c.SLboolean = .{c.SL_BOOLEAN_FALSE} ** max_interfaces;
         var iid_array: [max_interfaces]c.SLInterfaceID = .{c.SL_IID_NULL} ** max_interfaces;
 
-        required[0] = c.SL_BOOLEAN_FALSE;
-        iid_array[0] = c.SL_IID_VOLUME;
-
         // Get OutputMix object
         try checkResult(engine.*.*.CreateOutputMix.?(engine, &output_mix, 1, &iid_array, &required));
         app_log.info("Created output mix", .{});
         try checkResult(output_mix.*.*.Realize.?(output_mix, c.SL_BOOLEAN_FALSE));
         app_log.info("Realized output mix", .{});
         defer output_mix.*.*.Destroy.?(output_mix);
+
+        var output_mix_itf: c.SLOutputMixItf = undefined;
+        try checkResult(output_mix.*.*.GetInterface.?(output_mix, c.SL_IID_OUTPUTMIX, @ptrCast(*anyopaque, &output_mix_itf)));
+        // defer output_mix_itf.*.*.Destroy.?();
+        var output_device_ids: [10]c.SLuint32 = undefined;
+        var output_device_num: c.SLint32 = 10;
+        try checkResult(output_mix_itf.*.*.GetDestinationOutputDeviceIDs.?(output_mix_itf, &output_device_num, &output_device_ids));
+        for (output_device_ids[0..@intCast(usize, output_device_num)]) |id| {
+            // var descriptor: c.SLAudioOutputDescriptor = undefined;
+            // try checkResult(output_mix_itf.*.*.QueryAudioOutputCapabilities.?(output_mix_itf, id, &descriptor));
+            app_log.info("Output mix device id: {}", .{id});
+        }
 
         buffer_queue.locatorType = c.SL_DATALOCATOR_BUFFERQUEUE;
         buffer_queue.numBuffers = 4;
@@ -452,7 +479,7 @@ pub const OpenSL = struct {
         pcm.samplesPerSec = c.SL_SAMPLINGRATE_44_1;
         pcm.bitsPerSample = c.SL_PCMSAMPLEFORMAT_FIXED_16;
         pcm.containerSize = 16;
-        pcm.channelMask = c.SL_SPEAKER_FRONT_LEFT | c.SL_SPEAKER_FRONT_RIGHT;
+        pcm.channelMask = c.SL_SPEAKER_FRONT_CENTER;
         pcm.endianness = c.SL_BYTEORDER_LITTLEENDIAN;
 
         audio_source.pFormat = @ptrCast(*anyopaque, &pcm);
@@ -470,6 +497,7 @@ pub const OpenSL = struct {
             .play_itf = undefined,
             .data_base = pcm_data[0..],
             .data_index = 0,
+            .mutex = std.Thread.Mutex{},
         };
         context.setSampleRate(44100);
 
@@ -485,22 +513,26 @@ pub const OpenSL = struct {
         defer player.*.*.Destroy.?(player);
         try checkResult(player.*.*.GetInterface.?(player, c.SL_IID_PLAY, @ptrCast(*anyopaque, &play_itf)));
         app_log.info("got play interface", .{});
-        try checkResult(player.*.*.GetInterface.?(player, c.SL_IID_BUFFERQUEUE, @ptrCast(*anyopaque, &buffer_queue_itf)));
+        try checkResult(player.*.*.GetInterface.?(player, c.SL_IID_ANDROIDSIMPLEBUFFERQUEUE, @ptrCast(*anyopaque, &buffer_queue_itf)));
         app_log.info("got buffer queue interface", .{});
         try checkResult(buffer_queue_itf.*.*.RegisterCallback.?(buffer_queue_itf, bufferQueueCallback, @ptrCast(*anyopaque, &context))); // Register callback
         app_log.info("registered callback", .{});
 
         // Enqueue a few buffers to get the ball rollng
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
+        context.last_played_buffer = context.data_index / audio_data_buffer_size;
         context.data_index += audio_data_buffer_size;
         app_log.info("enqueued buffer", .{});
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
+        context.last_played_buffer = context.data_index / audio_data_buffer_size;
         context.data_index += audio_data_buffer_size;
         app_log.info("enqueued buffer", .{});
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
+        context.last_played_buffer = context.data_index / audio_data_buffer_size;
         context.data_index += audio_data_buffer_size;
         app_log.info("enqueued buffer", .{});
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
+        context.last_played_buffer = context.data_index / audio_data_buffer_size;
         context.data_index += audio_data_buffer_size;
         app_log.info("enqueued buffer", .{});
 
