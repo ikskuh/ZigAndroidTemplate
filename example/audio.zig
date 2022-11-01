@@ -7,108 +7,6 @@ const c = android.egl.c;
 
 const audio_log = std.log.scoped(.audio);
 
-// pub const AudioEngine = struct {
-//     oscillators: [10]Oscillator = undefined,
-//     stream: ?*c.AAudioStream = null,
-
-//     const buffer_size_in_bursts = 2;
-
-//     fn dataCallback(
-//         stream: ?*c.AAudioStream,
-//         user_data: ?*anyopaque,
-//         audio_data: ?*anyopaque,
-//         num_frames: i32,
-//     ) callconv(.C) c.aaudio_data_callback_result_t {
-//         _ = stream;
-//         const audio_engine = @ptrCast(*AudioEngine, @alignCast(@alignOf(AudioEngine), user_data.?));
-//         const audio_slice = @ptrCast([*]f32, @alignCast(@alignOf(f32), audio_data.?))[0..@intCast(usize, num_frames)];
-//         for (audio_slice) |*frame| {
-//             frame.* = 0;
-//         }
-//         for (audio_engine.oscillators) |*oscillator| {
-//             oscillator.render(audio_slice);
-//         }
-//         return c.AAUDIO_CALLBACK_RESULT_CONTINUE;
-//     }
-
-//     fn errorCallback(
-//         stream: ?*c.AAudioStream,
-//         user_data: ?*anyopaque,
-//         err: c.aaudio_result_t,
-//     ) callconv(.C) void {
-//         _ = stream;
-//         if (err == c.AAUDIO_ERROR_DISCONNECTED) {
-//             const self = @ptrCast(*AudioEngine, @alignCast(@alignOf(AudioEngine), user_data.?));
-//             _ = std.Thread.spawn(.{}, restart, .{self}) catch {
-//                 audio_log.err("Couldn't spawn thread", .{});
-//             };
-//         }
-//     }
-
-//     pub fn start(self: *@This()) bool {
-//         var stream_builder: ?*c.AAudioStreamBuilder = null;
-//         _ = c.AAudio_createStreamBuilder(&stream_builder);
-//         defer _ = c.AAudioStreamBuilder_delete(stream_builder);
-
-//         c.AAudioStreamBuilder_setFormat(stream_builder, c.AAUDIO_FORMAT_PCM_FLOAT);
-//         c.AAudioStreamBuilder_setChannelCount(stream_builder, 1);
-//         c.AAudioStreamBuilder_setPerformanceMode(stream_builder, c.AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
-//         c.AAudioStreamBuilder_setDataCallback(stream_builder, dataCallback, self);
-//         c.AAudioStreamBuilder_setErrorCallback(stream_builder, errorCallback, self);
-
-//         {
-//             const result = c.AAudioStreamBuilder_openStream(stream_builder, &self.stream);
-//             if (result != c.AAUDIO_OK) {
-//                 audio_log.err("Error opening stream {s}", .{c.AAudio_convertResultToText(result)});
-//                 return false;
-//             }
-//         }
-
-//         const sample_rate = c.AAudioStream_getSampleRate(self.stream);
-//         for (self.oscillators) |*oscillator, index| {
-//             oscillator.* = Oscillator{
-//                 .isWaveOn = false,
-//                 .frequency = midiToFreq(49 + index * 3),
-//                 .amplitude = dBToAmplitude(-@intToFloat(f64, index) - 11),
-//             };
-//             oscillator.setSampleRate(sample_rate);
-//         }
-
-//         _ = c.AAudioStream_setBufferSizeInFrames(self.stream, c.AAudioStream_getFramesPerBurst(self.stream) * buffer_size_in_bursts);
-
-//         {
-//             const result = c.AAudioStream_requestStart(self.stream);
-//             if (result != c.AAUDIO_OK) {
-//                 audio_log.err("Error starting stream {s}", .{c.AAudio_convertResultToText(result)});
-//                 return false;
-//             }
-//         }
-
-//         return true;
-//     }
-
-//     var restartingLock = std.Thread.Mutex{};
-//     pub fn restart(self: *@This()) void {
-//         if (restartingLock.tryLock()) {
-//             self.stop();
-//             _ = self.start();
-//             restartingLock.unlock();
-//         }
-//     }
-
-//     pub fn stop(self: *@This()) void {
-//         if (self.stream) |stream| {
-//             _ = c.AAudioStream_requestStop(stream);
-//             _ = c.AAudioStream_close(stream);
-//         }
-//     }
-
-//     pub fn setToneOn(self: *@This(), which: usize, isToneOn: bool) void {
-//         // if (which >= self.oscillators.len) return;
-//         self.oscillators[which].setWaveOn(isToneOn);
-//     }
-// };
-
 pub fn midiToFreq(note: usize) f64 {
     return std.math.pow(f64, 2, (@intToFloat(f64, note) - 49) / 12) * 440;
 }
@@ -119,10 +17,6 @@ pub fn amplitudeTodB(amplitude: f64) f64 {
 
 pub fn dBToAmplitude(dB: f64) f64 {
     return std.math.pow(f64, 10.0, dB / 20.0);
-}
-
-pub fn lerp(v0: f64, v1: f64, t: f64) f64 {
-    return v0 + t * (v1 - v0);
 }
 
 pub const StreamLayout = struct {
@@ -137,8 +31,235 @@ pub const StreamLayout = struct {
 
 const StreamCallbackFn = *const fn (StreamLayout, *anyopaque) void;
 
+pub const AudioManager = struct {};
+
+pub const OutputStreamConfig = struct {
+    // Leave null to use the the platforms native sampling rate
+    sample_rate: ?u32 = null,
+    sample_format: enum {
+        Uint8,
+        Int16,
+        Float32,
+    },
+    buffer_size: ?usize = null,
+    buffer_count: usize = 4,
+    channel_count: usize = 1,
+    callback: StreamCallbackFn,
+    user_data: *anyopaque,
+};
+
+pub const OutputStream = union(enum) {
+    OpenSL: OpenSL.OpenSLOutputStream,
+    AAudio: AAudio.AAudioOutputStream,
+
+    pub fn stop(output_stream: *@This()) !void {
+        switch (output_stream) {
+            .OpenSL => |opensl| try opensl.stop(),
+            .AAudio => |aaudio| try aaudio.stop(),
+        }
+    }
+
+    pub fn deinit(output_stream: *@This(), allocator: std.mem.Allocator) void {
+        switch (output_stream) {
+            .OpenSL => |opensl| opensl.deinit(allocator),
+            .AAudio => |aaudio| aaudio.deinit(),
+        }
+    }
+
+    pub fn start(output_stream: *@This()) !void {
+        switch (output_stream) {
+            .OpenSL => |opensl| try opensl.start(),
+            .AAudio => |aaudio| try aaudio.start(),
+        }
+    }
+};
+
+pub const AAudio = struct {
+    pub const AAudioOutputStream = struct {
+        config: OutputStreamConfig,
+        stream: ?*c.AAudioStream,
+        // thread: ?std.Thread = null,
+
+        pub fn start(output_stream: *@This()) !void {
+            try checkResult(c.AAudioStream_requestStart(output_stream.stream));
+            // output_stream.thread = try std.Thread.spawn(.{}, _start, .{output_stream});
+            // output_stream.thread.?.detach();
+        }
+
+        // fn _start(output_stream: *@This()) !void {
+        // }
+
+        // pub fn restart(output_stream: *@This()) void {
+        //     output_stream.stop() catch |e| {
+        //         audio_log.err("Error stopping stream {s}", .{@errorName(e)});
+        //     };
+        //     output_stream.deinit();
+        //     _ = output_stream.start();
+        // }
+
+        pub fn stop(output_stream: *@This()) !void {
+            try checkResult(c.AAudioStream_requestStop(output_stream.stream));
+        }
+
+        pub fn deinit(output_stream: *@This()) void {
+            checkResult(c.AAudioStream_close(output_stream.stream)) catch |e| {
+                audio_log.err("Error deiniting stream {s}", .{@errorName(e)});
+            };
+            // if (output_stream.thread) |thread| {
+            //     thread.join();
+            // }
+        }
+    };
+
+    fn dataCallback(
+        stream: ?*c.AAudioStream,
+        user_data: ?*anyopaque,
+        audio_data: ?*anyopaque,
+        num_frames: i32,
+    ) callconv(.C) c.aaudio_data_callback_result_t {
+        _ = stream;
+        const output_stream = @ptrCast(*AAudioOutputStream, @alignCast(@alignOf(AAudioOutputStream), user_data.?));
+        // TODO:
+        // const audio_slice = @ptrCast([*]f32, @alignCast(@alignOf(f32), audio_data.?))[0..@intCast(usize, num_frames)];
+        const audio_slice = @ptrCast([*]i16, @alignCast(@alignOf(i16), audio_data.?))[0..@intCast(usize, num_frames)];
+
+        for (audio_slice) |*frame| {
+            frame.* = 0;
+        }
+
+        var stream_layout = StreamLayout{
+            .sample_rate = output_stream.config.sample_rate.?,
+            .channel_count = @intCast(usize, output_stream.config.channel_count),
+            .buffer = .{ .Int16 = audio_slice },
+        };
+
+        output_stream.config.callback(stream_layout, output_stream.config.user_data);
+
+        return c.AAUDIO_CALLBACK_RESULT_CONTINUE;
+    }
+
+    fn errorCallback(
+        stream: ?*c.AAudioStream,
+        user_data: ?*anyopaque,
+        err: c.aaudio_result_t,
+    ) callconv(.C) void {
+        _ = stream;
+        audio_log.err("AAudio Stream error! {}", .{err});
+        if (err == c.AAUDIO_ERROR_DISCONNECTED) {
+            const output_stream = @ptrCast(*AAudioOutputStream, @alignCast(@alignOf(AAudioOutputStream), user_data.?));
+            // if (output_stream.thread) |thread| thread.join();
+            _ = std.Thread.spawn(.{}, AAudioOutputStream.deinit, .{output_stream}) catch @panic("eh");
+        }
+    }
+
+    pub fn getOutputStream(allocator: std.mem.Allocator, config: OutputStreamConfig) !*AAudioOutputStream {
+        errdefer audio_log.err("Encountered an error with getting output stream", .{});
+        // Create a stream builder
+        var stream_builder: ?*c.AAudioStreamBuilder = null;
+        checkResult(c.AAudio_createStreamBuilder(&stream_builder)) catch |e| {
+            audio_log.err("Couldn't create audio stream builder: {s}", .{@errorName(e)});
+            return e;
+        };
+        defer checkResult(c.AAudioStreamBuilder_delete(stream_builder)) catch |e| {
+            // TODO
+            audio_log.err("Issue with deleting stream builder: {s}", .{@errorName(e)});
+        };
+
+        var output_stream = try allocator.create(AAudioOutputStream);
+        output_stream.* = AAudioOutputStream{
+            .config = config,
+            .stream = undefined,
+        };
+
+        // Configure the stream
+        c.AAudioStreamBuilder_setFormat(stream_builder, switch (config.sample_format) {
+            .Uint8 => return error.Unsupported,
+            .Int16 => c.AAUDIO_FORMAT_PCM_I16,
+            .Float32 => c.AAUDIO_FORMAT_PCM_FLOAT,
+        });
+        c.AAudioStreamBuilder_setChannelCount(stream_builder, @intCast(i32, config.channel_count));
+        c.AAudioStreamBuilder_setPerformanceMode(stream_builder, c.AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
+        c.AAudioStreamBuilder_setDataCallback(stream_builder, dataCallback, output_stream);
+        c.AAudioStreamBuilder_setErrorCallback(stream_builder, errorCallback, output_stream);
+
+        if (config.sample_rate) |rate| c.AAudioStreamBuilder_setSampleRate(stream_builder, @intCast(i32, rate));
+        if (config.buffer_size) |size| c.AAudioStreamBuilder_setFramesPerDataCallback(stream_builder, @intCast(i32, size));
+
+        // Open the stream
+        checkResult(c.AAudioStreamBuilder_openStream(stream_builder, &output_stream.stream)) catch |e| {
+            audio_log.err("Issue with opening stream: {s}", .{@errorName(e)});
+            return e;
+        };
+
+        // Save the details of the stream
+        output_stream.config.sample_rate = @intCast(u32, c.AAudioStream_getSampleRate(output_stream.stream));
+        output_stream.config.buffer_size = @intCast(usize, c.AAudioStream_getFramesPerBurst(output_stream.stream));
+
+        var res = c.AAudioStream_setBufferSizeInFrames(output_stream.stream, @intCast(i32, output_stream.config.buffer_count * output_stream.config.buffer_size.?));
+        if (res < 0) {
+            checkResult(res) catch |e| {
+                audio_log.err("Issue with setting buffer size in frames stream: {s}", .{@errorName(e)});
+                return e;
+            };
+        } else {
+            // TODO: store buffer size somewhere
+            // output_stream.config.
+        }
+
+        audio_log.info("Got AAudio OutputStream", .{});
+
+        return output_stream;
+    }
+
+    pub const AAudioError = error{
+        Base,
+        Disconnected,
+        IllegalArgument,
+        Internal,
+        InvalidState,
+        InvalidHandle,
+        Unimplemented,
+        Unavailable,
+        NoFreeHandles,
+        NoMemory,
+        Null,
+        Timeout,
+        WouldBlock,
+        InvalidFormat,
+        OutOfRange,
+        NoService,
+        InvalidRate,
+        Unknown,
+    };
+
+    pub fn checkResult(result: c.aaudio_result_t) AAudioError!void {
+        return switch (result) {
+            c.AAUDIO_OK => {},
+            c.AAUDIO_ERROR_BASE => error.Base,
+            c.AAUDIO_ERROR_DISCONNECTED => error.Disconnected,
+            c.AAUDIO_ERROR_ILLEGAL_ARGUMENT => error.IllegalArgument,
+            c.AAUDIO_ERROR_INTERNAL => error.Internal,
+            c.AAUDIO_ERROR_INVALID_STATE => error.InvalidState,
+            c.AAUDIO_ERROR_INVALID_HANDLE => error.InvalidHandle,
+            c.AAUDIO_ERROR_UNIMPLEMENTED => error.Unimplemented,
+            c.AAUDIO_ERROR_UNAVAILABLE => error.Unavailable,
+            c.AAUDIO_ERROR_NO_FREE_HANDLES => error.NoFreeHandles,
+            c.AAUDIO_ERROR_NO_MEMORY => error.NoMemory,
+            c.AAUDIO_ERROR_NULL => error.Null,
+            c.AAUDIO_ERROR_TIMEOUT => error.Timeout,
+            c.AAUDIO_ERROR_WOULD_BLOCK => error.WouldBlock,
+            c.AAUDIO_ERROR_INVALID_FORMAT => error.InvalidFormat,
+            c.AAUDIO_ERROR_OUT_OF_RANGE => error.OutOfRange,
+            c.AAUDIO_ERROR_NO_SERVICE => error.NoService,
+            c.AAUDIO_ERROR_INVALID_RATE => error.InvalidRate,
+            else => error.Unknown,
+        };
+    }
+};
+
 // OpenSLES support
 pub const OpenSL = struct {
+    // Global variables
     var init_sl_counter: usize = 0;
     var engine_object: c.SLObjectItf = undefined;
     var engine: c.SLEngineItf = undefined;
@@ -146,15 +267,7 @@ pub const OpenSL = struct {
     var output_mix: c.SLObjectItf = undefined;
     var output_mix_itf: c.SLOutputMixItf = undefined;
 
-    // Local storage for audio data in 16 bit words
-    const audio_data_storage_size = 4096;
-    // Audio data buffer size in 16 bit words. 8 data segments are used in this simple example.
-    const audio_data_buffer_size = audio_data_storage_size / 8;
-
-    // Local storage for audio data
-    var pcm_data: [audio_data_storage_size]c.SLint16 = undefined;
-
-    pub const OutputStream = struct {
+    pub const OpenSLOutputStream = struct {
         config: OutputStreamConfig,
         player: c.SLObjectItf,
         play_itf: c.SLPlayItf,
@@ -174,16 +287,16 @@ pub const OpenSL = struct {
 
         // Must be initialized using OpenSL.getOutputStream
 
-        pub fn stop(output_stream: *OutputStream) !void {
+        pub fn stop(output_stream: *OpenSLOutputStream) !void {
             try checkResult(output_stream.play_itf.*.*.SetPlayState.?(output_stream.play_itf, c.SL_PLAYSTATE_STOPPED));
         }
 
-        pub fn deinit(output_stream: *OutputStream, alloc: std.mem.Allocator) void {
+        pub fn deinit(output_stream: *OpenSLOutputStream, alloc: std.mem.Allocator) void {
             output_stream.player.*.*.Destroy.?(output_stream.player);
             alloc.free(output_stream.buffer);
         }
 
-        pub fn start(output_stream: *OutputStream) !void {
+        pub fn start(output_stream: *OpenSLOutputStream) !void {
             // Get player interface
             try checkResult(output_stream.player.*.*.GetInterface.?(
                 output_stream.player,
@@ -211,48 +324,50 @@ pub const OpenSL = struct {
                 try checkResult(output_stream.buffer_queue_itf.*.*.Enqueue.?(
                     output_stream.buffer_queue_itf,
                     &output_stream.buffer[output_stream.buffer_index],
-                    @intCast(u32, output_stream.config.buffer_size * output_stream.pcm.containerSize),
+                    @intCast(u32, output_stream.config.buffer_size.? * (output_stream.pcm.containerSize / 8)),
                 ));
-                output_stream.buffer_index += output_stream.buffer_index;
+                output_stream.buffer_index += output_stream.config.buffer_size.?;
             }
+
+            output_stream.buffer_index = (output_stream.buffer_index + output_stream.config.buffer_size.?) % output_stream.buffer.len;
 
             // Start playing queued audio buffers
             try checkResult(output_stream.play_itf.*.*.SetPlayState.?(output_stream.play_itf, c.SL_PLAYSTATE_PLAYING));
+
+            audio_log.info("started opensl output stream", .{});
         }
     };
 
     pub fn bufferQueueCallback(queue_itf: c.SLAndroidSimpleBufferQueueItf, user_data: ?*anyopaque) callconv(.C) void {
-        var output_stream = @ptrCast(*OutputStream, @alignCast(@alignOf(OutputStream), user_data));
+        var output_stream = @ptrCast(*OpenSLOutputStream, @alignCast(@alignOf(OpenSLOutputStream), user_data));
 
         // Lock the mutex to prevent race conditions
         output_stream.mutex.lock();
         defer output_stream.mutex.unlock();
 
-        if (output_stream.buffer_index < output_stream.buffer.len) {
-            var buffer = output_stream.buffer[output_stream.buffer_index .. output_stream.buffer_index + output_stream.config.buffer_size];
+        var buffer = output_stream.buffer[output_stream.buffer_index .. output_stream.buffer_index + output_stream.config.buffer_size.?];
 
-            for (buffer) |*frame| {
-                frame.* = 0;
-            }
-
-            var stream_layout = StreamLayout{
-                .sample_rate = output_stream.pcm.samplesPerSec / 1000,
-                .channel_count = output_stream.pcm.numChannels,
-                .buffer = .{ .Int16 = buffer },
-            };
-
-            output_stream.config.callback(stream_layout, output_stream.config.user_data);
-
-            checkResult(queue_itf.*.*.Enqueue.?(
-                queue_itf,
-                @ptrCast(*anyopaque, buffer.ptr),
-                @intCast(c.SLuint32, (output_stream.pcm.containerSize / 8) * buffer.len),
-            )) catch |e| {
-                audio_log.err("Error enqueueing buffer! {s}", .{@errorName(e)});
-            };
-
-            output_stream.buffer_index = (output_stream.buffer_index + output_stream.config.buffer_size) % output_stream.buffer.len;
+        for (buffer) |*frame| {
+            frame.* = 0;
         }
+
+        var stream_layout = StreamLayout{
+            .sample_rate = output_stream.pcm.samplesPerSec / 1000,
+            .channel_count = output_stream.pcm.numChannels,
+            .buffer = .{ .Int16 = buffer },
+        };
+
+        output_stream.config.callback(stream_layout, output_stream.config.user_data);
+
+        checkResult(queue_itf.*.*.Enqueue.?(
+            queue_itf,
+            @ptrCast(*anyopaque, buffer.ptr),
+            @intCast(c.SLuint32, (output_stream.pcm.containerSize / 8) * buffer.len),
+        )) catch |e| {
+            audio_log.err("Error enqueueing buffer! {s}", .{@errorName(e)});
+        };
+
+        output_stream.buffer_index = (output_stream.buffer_index + output_stream.config.buffer_size.?) % output_stream.buffer.len;
     }
 
     pub fn init() SLError!void {
@@ -297,26 +412,17 @@ pub const OpenSL = struct {
         // spinlock unlock
     }
 
-    pub const OutputStreamConfig = struct {
-        sample_rate: u32 = 44100,
-        sample_format: enum {
-            Uint8,
-            Int16,
-            Float32,
-        },
-        buffer_size: usize = 256,
-        buffer_count: usize = 4,
-        channel_count: usize = 1,
-        callback: StreamCallbackFn,
-        user_data: *anyopaque,
-    };
-
-    pub fn getOutputStream(allocator: std.mem.Allocator, config: OutputStreamConfig) !*OutputStream {
+    pub fn getOutputStream(allocator: std.mem.Allocator, conf: OutputStreamConfig) !*OpenSLOutputStream {
         // TODO: support multiple formats
-        std.debug.assert(config.sample_format == .Int16);
+        std.debug.assert(conf.sample_format == .Int16);
+
+        var config = conf;
+        config.buffer_size = config.buffer_size orelse 256;
+        config.sample_rate = config.sample_rate orelse 44100;
 
         // Allocate memory for audio buffer
-        var buffers = try allocator.alloc(i16, config.buffer_size * config.buffer_count);
+        // TODO: support other formats
+        var buffers = try allocator.alloc(i16, config.buffer_size.? * config.buffer_count);
         errdefer allocator.free(buffers);
 
         for (buffers) |*sample| {
@@ -324,8 +430,8 @@ pub const OpenSL = struct {
         }
 
         // Initialize the context for Buffer queue callbacks
-        var output_stream: *OutputStream = try allocator.create(OutputStream);
-        output_stream.* = OutputStream{
+        var output_stream = try allocator.create(OpenSLOutputStream);
+        output_stream.* = OpenSLOutputStream{
             // We don't have these values yet
             .player = undefined,
             .play_itf = undefined,
@@ -347,7 +453,7 @@ pub const OpenSL = struct {
             .pcm = .{
                 .formatType = c.SL_DATAFORMAT_PCM,
                 .numChannels = @intCast(u32, config.channel_count),
-                .samplesPerSec = config.sample_rate * 1000, // OpenSL ES uses milliHz instead of Hz, for some reason
+                .samplesPerSec = config.sample_rate.? * 1000, // OpenSL ES uses milliHz instead of Hz, for some reason
                 .bitsPerSample = switch (config.sample_format) {
                     .Uint8 => c.SL_PCMSAMPLEFORMAT_FIXED_8,
                     .Int16 => c.SL_PCMSAMPLEFORMAT_FIXED_16,
