@@ -153,7 +153,6 @@ pub const OpenSL = struct {
     var engine: c.SLEngineItf = undefined;
 
     var output_mix: c.SLObjectItf = undefined;
-    // var volume_itf: c.SLVolumeItf = undefined;
 
     var player: c.SLObjectItf = undefined;
     var play_itf: c.SLPlayItf = undefined;
@@ -194,21 +193,9 @@ pub const OpenSL = struct {
     };
 
     pub fn bufferQueueCallback(queue_itf: c.SLAndroidSimpleBufferQueueItf, user_data: ?*anyopaque) callconv(.C) void {
-        // app_log.info("buffer queue callback", .{});
         var context = @ptrCast(*CallbackContext, @alignCast(@alignOf(CallbackContext), user_data));
         context.mutex.lock();
         defer context.mutex.unlock();
-        var queue_state: c.SLAndroidSimpleBufferQueueState = undefined;
-        checkResult(queue_itf.*.*.GetState.?(queue_itf, &queue_state)) catch |e| {
-            app_log.err("Error getting buffer state! {s}", .{@errorName(e)});
-        };
-        app_log.err("Index: {}, Count: {}", .{ queue_state.index, queue_state.count });
-        // const position = (context.data_index - (context.data_index % audio_data_buffer_size)) / audio_data_buffer_size;
-        while (queue_state.count > 6) {
-            checkResult(queue_itf.*.*.GetState.?(queue_itf, &queue_state)) catch |e| {
-                app_log.err("Error getting buffer state! {s}", .{@errorName(e)});
-            };
-        }
         if (context.data_index < context.data_base.len) {
             var buffer = context.data_base[context.data_index..context.data_index + audio_data_buffer_size];
             var i: usize = 0;
@@ -223,173 +210,6 @@ pub const OpenSL = struct {
                 app_log.err("Error enqueueing buffer! {s}", .{@errorName(e)});
             };
             context.data_index = (context.data_index + audio_data_buffer_size) % context.data_base.len;
-            // if (context.data_index >= context.data_base.len) context.data_index = 0;
-        }
-    }
-
-    fn iidEq(iid1: c.SLInterfaceID, iid2: c.SLInterfaceID) bool {
-        return iid1.*.time_low == iid2.*.time_low and
-            iid1.*.time_mid == iid2.*.time_mid and
-            iid1.*.time_hi_and_version == iid2.*.time_hi_and_version and
-            iid1.*.clock_seq == iid2.*.clock_seq and
-            iid1.*.time_mid == iid2.*.time_mid and
-            std.mem.eql(u8, &iid1.*.node, &iid2.*.node);
-    }
-
-    const InterfaceID = enum {
-        AudioIODeviceCapabilities,
-        Led,
-        Vibra,
-        MetadataExtraction,
-        MetadataTraversal,
-        DynamicSource,
-        OutputMix,
-        Play,
-        PrefetchStatus,
-        PlaybackRate,
-        Seek,
-        Record,
-        Equalizer,
-        Volume,
-        DeviceVolume,
-        Object,
-        BufferQueue,
-        PresetReverb,
-        EnvironmentalReverb,
-        EffectSend,
-        _3DGrouping,
-        _3DCommit,
-        _3DLocation,
-        _3DDoppler,
-        _3DSource,
-        _3DMacroscopic,
-        MuteSolo,
-        DynamicInterfaceManagement,
-        MidiMessage,
-        MidiTempo,
-        MidiMuteSolo,
-        MidiTime,
-        AudioDecoderCapabilities,
-        AudioEncoder,
-        AudioEncoderCapabilities,
-        BassBoost,
-        Pitch,
-        RatePitch,
-        Virtualizer,
-        Visualization,
-        Engine,
-        EngineCapabilities,
-        ThreadSync,
-        AndroidEffect,
-        AndroidEffectSend,
-        AndroidConfiguration,
-        AndroidSimpleBufferQueue,
-        AndroidBufferQueueSource,
-        AndroidAcousticEchoCancellation,
-        AndroidAutomaticGainControl,
-        AndroidNoiseSuppresssion,
-        fn fromIid(iid: c.SLInterfaceID) ?InterfaceID {
-            if (iidEq(iid, c.SL_IID_NULL)) return null;
-            if (iidEq(iid, c.SL_IID_AUDIOIODEVICECAPABILITIES)) return .AudioIODeviceCapabilities;
-            if (iidEq(iid, c.SL_IID_LED)) return .Led;
-            if (iidEq(iid, c.SL_IID_VIBRA)) return .Vibra;
-            if (iidEq(iid, c.SL_IID_METADATAEXTRACTION)) return .MetadataExtraction;
-            if (iidEq(iid, c.SL_IID_METADATATRAVERSAL)) return .MetadataTraversal;
-            if (iidEq(iid, c.SL_IID_DYNAMICSOURCE)) return .DynamicSource;
-            if (iidEq(iid, c.SL_IID_OUTPUTMIX)) return .OutputMix;
-            if (iidEq(iid, c.SL_IID_PLAY)) return .Play;
-            if (iidEq(iid, c.SL_IID_PREFETCHSTATUS)) return .PrefetchStatus;
-            if (iidEq(iid, c.SL_IID_PLAYBACKRATE)) return .PlaybackRate;
-            if (iidEq(iid, c.SL_IID_SEEK)) return .Seek;
-            if (iidEq(iid, c.SL_IID_RECORD)) return .Record;
-            if (iidEq(iid, c.SL_IID_EQUALIZER)) return .Equalizer;
-            if (iidEq(iid, c.SL_IID_VOLUME)) return .Volume;
-            if (iidEq(iid, c.SL_IID_DEVICEVOLUME)) return .DeviceVolume;
-            if (iidEq(iid, c.SL_IID_OBJECT)) return .Object;
-            if (iidEq(iid, c.SL_IID_BUFFERQUEUE)) return .BufferQueue;
-            if (iidEq(iid, c.SL_IID_PRESETREVERB)) return .PresetReverb;
-            if (iidEq(iid, c.SL_IID_ENVIRONMENTALREVERB)) return .EnvironmentalReverb;
-            if (iidEq(iid, c.SL_IID_EFFECTSEND)) return .EffectSend;
-            if (iidEq(iid, c.SL_IID_3DGROUPING)) return ._3DGrouping;
-            if (iidEq(iid, c.SL_IID_3DCOMMIT)) return ._3DCommit;
-            if (iidEq(iid, c.SL_IID_3DLOCATION)) return ._3DLocation;
-            if (iidEq(iid, c.SL_IID_3DDOPPLER)) return ._3DDoppler;
-            if (iidEq(iid, c.SL_IID_3DSOURCE)) return ._3DSource;
-            if (iidEq(iid, c.SL_IID_3DMACROSCOPIC)) return ._3DMacroscopic;
-            if (iidEq(iid, c.SL_IID_MUTESOLO)) return .MuteSolo;
-            if (iidEq(iid, c.SL_IID_DYNAMICINTERFACEMANAGEMENT)) return .DynamicInterfaceManagement;
-            if (iidEq(iid, c.SL_IID_MIDIMESSAGE)) return .MidiMessage;
-            if (iidEq(iid, c.SL_IID_MIDITEMPO)) return .MidiTempo;
-            if (iidEq(iid, c.SL_IID_MIDIMUTESOLO)) return .MidiMuteSolo;
-            if (iidEq(iid, c.SL_IID_MIDITIME)) return .MidiTime;
-            if (iidEq(iid, c.SL_IID_AUDIODECODERCAPABILITIES)) return .AudioDecoderCapabilities;
-            if (iidEq(iid, c.SL_IID_AUDIOENCODER)) return .AudioEncoder;
-            if (iidEq(iid, c.SL_IID_AUDIOENCODERCAPABILITIES)) return .AudioEncoderCapabilities;
-            if (iidEq(iid, c.SL_IID_BASSBOOST)) return .BassBoost;
-            if (iidEq(iid, c.SL_IID_PITCH)) return .Pitch;
-            if (iidEq(iid, c.SL_IID_RATEPITCH)) return .RatePitch;
-            if (iidEq(iid, c.SL_IID_VIRTUALIZER)) return .Virtualizer;
-            if (iidEq(iid, c.SL_IID_VISUALIZATION)) return .Visualization;
-            if (iidEq(iid, c.SL_IID_ENGINE)) return .Engine;
-            if (iidEq(iid, c.SL_IID_ENGINECAPABILITIES)) return .EngineCapabilities;
-            if (iidEq(iid, c.SL_IID_ANDROIDEFFECT)) return .AndroidEffect;
-            if (iidEq(iid, c.SL_IID_ANDROIDEFFECTSEND)) return .AndroidEffectSend;
-            if (iidEq(iid, c.SL_IID_ANDROIDCONFIGURATION)) return .AndroidConfiguration;
-            if (iidEq(iid, c.SL_IID_ANDROIDSIMPLEBUFFERQUEUE)) return .AndroidSimpleBufferQueue;
-            if (iidEq(iid, c.SL_IID_ANDROIDBUFFERQUEUESOURCE)) return .AndroidBufferQueueSource;
-            if (iidEq(iid, c.SL_IID_ANDROIDACOUSTICECHOCANCELLATION)) return .AndroidAcousticEchoCancellation;
-            if (iidEq(iid, c.SL_IID_ANDROIDAUTOMATICGAINCONTROL)) return .AndroidAutomaticGainControl;
-            if (iidEq(iid, c.SL_IID_ANDROIDNOISESUPPRESSION)) return .AndroidNoiseSuppresssion;
-            return null;
-        }
-    };
-
-    fn printInterfaces() !void {
-        var interface_count: c.SLuint32 = undefined;
-        try checkResult(c.slQueryNumSupportedEngineInterfaces(&interface_count));
-        {
-            var i: c.SLuint32 = 0;
-            while (i < interface_count) : (i += 1) {
-                var interface_id: c.SLInterfaceID = undefined;
-                try checkResult(c.slQuerySupportedEngineInterfaces(i, &interface_id));
-                const interface_tag = InterfaceID.fromIid(interface_id);
-                if (interface_tag) |tag| {
-                    app_log.info("OpenSL engine interface id: {s}", .{@tagName(tag)});
-                }
-            }
-        }
-    }
-
-    fn printEngineExtensions() !void {
-        var extension_count: c.SLuint32 = undefined;
-        try checkResult(engine.*.*.QueryNumSupportedExtensions.?(engine, &extension_count));
-        {
-            var i: c.SLuint32 = 0;
-            while (i < extension_count) : (i += 1) {
-                var extension_ptr: [4096]u8 = undefined;
-                var extension_size: c.SLint16 = 4096;
-                try checkResult(engine.*.*.QuerySupportedExtension.?(engine, i, &extension_ptr, &extension_size));
-                var extension_name = extension_ptr[0..@intCast(usize, extension_size)];
-                app_log.info("OpenSL engine extension {}: {s}", .{ i, extension_name });
-            }
-        }
-    }
-
-    fn printEngineInterfaces() !void {
-        var interface_count: c.SLuint32 = undefined;
-        try checkResult(engine.*.*.QueryNumSupportedInterfaces.?(engine, c.SL_OBJECTID_ENGINE, &interface_count));
-        {
-            var i: c.SLuint32 = 0;
-            while (i < interface_count) : (i += 1) {
-                var interface_id: c.SLInterfaceID = undefined;
-                try checkResult(engine.*.*.QuerySupportedInterfaces.?(engine, c.SL_OBJECTID_ENGINE, i, &interface_id));
-                const interface_tag = InterfaceID.fromIid(interface_id);
-                if (interface_tag) |tag| {
-                    app_log.info("OpenSL engine interface id: {s}", .{@tagName(tag)});
-                } else {
-                    app_log.info("Unknown engine interface id: {}", .{interface_id.*});
-                }
-            }
         }
     }
 
@@ -507,44 +327,33 @@ pub const OpenSL = struct {
 
         // Create the music player
         try checkResult(engine.*.*.CreateAudioPlayer.?(engine, &player, &audio_source, &audio_sink, 1, &iid_array, &required));
-        app_log.info("Created audio player", .{});
         try checkResult(player.*.*.Realize.?(player, c.SL_BOOLEAN_FALSE));
-        app_log.info("Realized player", .{});
         defer player.*.*.Destroy.?(player);
         try checkResult(player.*.*.GetInterface.?(player, c.SL_IID_PLAY, @ptrCast(*anyopaque, &play_itf)));
-        app_log.info("got play interface", .{});
         try checkResult(player.*.*.GetInterface.?(player, c.SL_IID_ANDROIDSIMPLEBUFFERQUEUE, @ptrCast(*anyopaque, &buffer_queue_itf)));
-        app_log.info("got buffer queue interface", .{});
         try checkResult(buffer_queue_itf.*.*.RegisterCallback.?(buffer_queue_itf, bufferQueueCallback, @ptrCast(*anyopaque, &context))); // Register callback
-        app_log.info("registered callback", .{});
 
         // Enqueue a few buffers to get the ball rollng
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
         context.last_played_buffer = context.data_index / audio_data_buffer_size;
         context.data_index += audio_data_buffer_size;
-        app_log.info("enqueued buffer", .{});
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
         context.last_played_buffer = context.data_index / audio_data_buffer_size;
         context.data_index += audio_data_buffer_size;
-        app_log.info("enqueued buffer", .{});
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
         context.last_played_buffer = context.data_index / audio_data_buffer_size;
         context.data_index += audio_data_buffer_size;
-        app_log.info("enqueued buffer", .{});
         try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
         context.last_played_buffer = context.data_index / audio_data_buffer_size;
         context.data_index += audio_data_buffer_size;
-        app_log.info("enqueued buffer", .{});
 
         try checkResult(play_itf.*.*.SetPlayState.?(play_itf, c.SL_PLAYSTATE_PLAYING));
-        app_log.info("set playstate", .{});
 
         // Wait until the PCM data is done playing, the buffer queue callback
         // will continue to queue buffers until the entire PCM data has been
         // played. This is indicated by waiting for the count member of the
         // SLBufferQueueState to go to zero.
         try checkResult(buffer_queue_itf.*.*.GetState.?(buffer_queue_itf, &state));
-        app_log.info("get buffer queue state", .{});
 
         while (state.count > 0) {
             try checkResult(buffer_queue_itf.*.*.GetState.?(buffer_queue_itf, &state));
@@ -555,68 +364,6 @@ pub const OpenSL = struct {
         try checkResult(play_itf.*.*.SetPlayState.?(play_itf, c.SL_PLAYSTATE_STOPPED));
         app_log.info("set play state stopped", .{});
     }
-
-    // pub const BufferQueue = struct {
-    //     pub fn callback_playback(buffer_queue: c.SLAndroidSimpleBufferQueueItf, user_data: ?*anyopaque) !void {}
-    //     pub fn callback_capture(buffer_queue: c.SLAndroidSimpleBufferQueueItf, user_data: ?*anyopaque) !void {}
-    // };
-
-    // pub const Device = struct {
-    //     pub fn init(device) !void {}
-
-    //     pub fn deinit(device) void {}
-
-    //     pub fn getInfo(context, device_type, device_id, device_info) !void {}
-
-    //     pub fn enumerate(context, callback, user_data) !void {}
-
-    //     pub fn drain() !void {}
-
-    //     pub fn start(device) !void {
-    //         std.debug.assert(init_sl_counter > 0);
-    //         if (init_sl_counter == 0) return error.OperationInvalid;
-    //         if (device.type == .Capture or device.type == .Duplex) {
-    //             checkResult(audio_recorder.SetRecordState(audio_recorder, c.SL_RECORDSTATE_RECORDING)) catch |e| {
-    //                 // log device here
-    //                 return e;
-    //             };
-
-    //             const period_size_in_bytes = capture.internalPeriodSizeInFrames * getBytesPerFrame();
-    //             var iperiod: usize = 0;
-    //             while (iperiod < device.capture.internal_periods) : (i += 1) {
-    //                 try checkResult(buffer_queue_capture.Enqueue(buffer_queue_capture, buffer_capture + (period_size_in_bytes * iperiod), period_size_in_bytes));
-    //             }
-    //         }
-
-    //         if (device.type == .Playback or device.type == .Duplex) {
-    //             checkResult(audio_player.SetPlayState(audio_player, c.SL_PLAYSTATE_RECORDING)) catch |e| {
-    //                 // log device here
-    //                 return e;
-    //             };
-
-    //             // In playback mode (no duplex) we need to load some initial buffers. In duplex mode we need to enqueue silent buffers.
-    //             if (device.type == .Duplex) {
-    //                 // zero memory
-    //             } else {
-    //                 // read frames from client
-    //             }
-
-    //             const period_size_in_bytes = capture.internalPeriodSizeInFrames * getBytesPerFrame();
-    //             var iperiod: usize = 0;
-    //             while (iperiod < device.capture.internal_periods) : (i += 1) {
-    //                 checkResult(buffer_queue_playback.Enqueue(buffer_queue_playback, buffer_playback + (period_size_in_bytes * iperiod), period_size_in_bytes)) catch |e| {
-    //                     audio_player.SetPlayState(audio_player, c.SL_PLAYSTATE_STOPPED);
-    //                     // log
-    //                     return e;
-    //                 };
-    //             }
-    //         }
-    //     }
-
-    //     pub fn stop(device) void {
-    //         std.debug.assert(init_sl_counter > 0);
-    //     }
-    // };
 
     const Result = enum(u32) {
         Success = c.SL_RESULT_SUCCESS,
@@ -681,4 +428,175 @@ pub const OpenSL = struct {
             else => error.UnknownError,
         };
     }
+
+    fn printInterfaces() !void {
+        var interface_count: c.SLuint32 = undefined;
+        try checkResult(c.slQueryNumSupportedEngineInterfaces(&interface_count));
+        {
+            var i: c.SLuint32 = 0;
+            while (i < interface_count) : (i += 1) {
+                var interface_id: c.SLInterfaceID = undefined;
+                try checkResult(c.slQuerySupportedEngineInterfaces(i, &interface_id));
+                const interface_tag = InterfaceID.fromIid(interface_id);
+                if (interface_tag) |tag| {
+                    app_log.info("OpenSL engine interface id: {s}", .{@tagName(tag)});
+                }
+            }
+        }
+    }
+
+    fn printEngineExtensions() !void {
+        var extension_count: c.SLuint32 = undefined;
+        try checkResult(engine.*.*.QueryNumSupportedExtensions.?(engine, &extension_count));
+        {
+            var i: c.SLuint32 = 0;
+            while (i < extension_count) : (i += 1) {
+                var extension_ptr: [4096]u8 = undefined;
+                var extension_size: c.SLint16 = 4096;
+                try checkResult(engine.*.*.QuerySupportedExtension.?(engine, i, &extension_ptr, &extension_size));
+                var extension_name = extension_ptr[0..@intCast(usize, extension_size)];
+                app_log.info("OpenSL engine extension {}: {s}", .{ i, extension_name });
+            }
+        }
+    }
+
+    fn printEngineInterfaces() !void {
+        var interface_count: c.SLuint32 = undefined;
+        try checkResult(engine.*.*.QueryNumSupportedInterfaces.?(engine, c.SL_OBJECTID_ENGINE, &interface_count));
+        {
+            var i: c.SLuint32 = 0;
+            while (i < interface_count) : (i += 1) {
+                var interface_id: c.SLInterfaceID = undefined;
+                try checkResult(engine.*.*.QuerySupportedInterfaces.?(engine, c.SL_OBJECTID_ENGINE, i, &interface_id));
+                const interface_tag = InterfaceID.fromIid(interface_id);
+                if (interface_tag) |tag| {
+                    app_log.info("OpenSL engine interface id: {s}", .{@tagName(tag)});
+                } else {
+                    app_log.info("Unknown engine interface id: {}", .{interface_id.*});
+                }
+            }
+        }
+    }
+
+
+    fn iidEq(iid1: c.SLInterfaceID, iid2: c.SLInterfaceID) bool {
+        return iid1.*.time_low == iid2.*.time_low and
+            iid1.*.time_mid == iid2.*.time_mid and
+            iid1.*.time_hi_and_version == iid2.*.time_hi_and_version and
+            iid1.*.clock_seq == iid2.*.clock_seq and
+            iid1.*.time_mid == iid2.*.time_mid and
+            std.mem.eql(u8, &iid1.*.node, &iid2.*.node);
+    }
+
+    const InterfaceID = enum {
+        AudioIODeviceCapabilities,
+        Led,
+        Vibra,
+        MetadataExtraction,
+        MetadataTraversal,
+        DynamicSource,
+        OutputMix,
+        Play,
+        PrefetchStatus,
+        PlaybackRate,
+        Seek,
+        Record,
+        Equalizer,
+        Volume,
+        DeviceVolume,
+        Object,
+        BufferQueue,
+        PresetReverb,
+        EnvironmentalReverb,
+        EffectSend,
+        _3DGrouping,
+        _3DCommit,
+        _3DLocation,
+        _3DDoppler,
+        _3DSource,
+        _3DMacroscopic,
+        MuteSolo,
+        DynamicInterfaceManagement,
+        MidiMessage,
+        MidiTempo,
+        MidiMuteSolo,
+        MidiTime,
+        AudioDecoderCapabilities,
+        AudioEncoder,
+        AudioEncoderCapabilities,
+        BassBoost,
+        Pitch,
+        RatePitch,
+        Virtualizer,
+        Visualization,
+        Engine,
+        EngineCapabilities,
+        ThreadSync,
+        AndroidEffect,
+        AndroidEffectSend,
+        AndroidEffectCapabilities,
+        AndroidConfiguration,
+        AndroidSimpleBufferQueue,
+        AndroidBufferQueueSource,
+        AndroidAcousticEchoCancellation,
+        AndroidAutomaticGainControl,
+        AndroidNoiseSuppresssion,
+        fn fromIid(iid: c.SLInterfaceID) ?InterfaceID {
+            if (iidEq(iid, c.SL_IID_NULL)) return null;
+            if (iidEq(iid, c.SL_IID_AUDIOIODEVICECAPABILITIES)) return .AudioIODeviceCapabilities;
+            if (iidEq(iid, c.SL_IID_LED)) return .Led;
+            if (iidEq(iid, c.SL_IID_VIBRA)) return .Vibra;
+            if (iidEq(iid, c.SL_IID_METADATAEXTRACTION)) return .MetadataExtraction;
+            if (iidEq(iid, c.SL_IID_METADATATRAVERSAL)) return .MetadataTraversal;
+            if (iidEq(iid, c.SL_IID_DYNAMICSOURCE)) return .DynamicSource;
+            if (iidEq(iid, c.SL_IID_OUTPUTMIX)) return .OutputMix;
+            if (iidEq(iid, c.SL_IID_PLAY)) return .Play;
+            if (iidEq(iid, c.SL_IID_PREFETCHSTATUS)) return .PrefetchStatus;
+            if (iidEq(iid, c.SL_IID_PLAYBACKRATE)) return .PlaybackRate;
+            if (iidEq(iid, c.SL_IID_SEEK)) return .Seek;
+            if (iidEq(iid, c.SL_IID_RECORD)) return .Record;
+            if (iidEq(iid, c.SL_IID_EQUALIZER)) return .Equalizer;
+            if (iidEq(iid, c.SL_IID_VOLUME)) return .Volume;
+            if (iidEq(iid, c.SL_IID_DEVICEVOLUME)) return .DeviceVolume;
+            if (iidEq(iid, c.SL_IID_OBJECT)) return .Object;
+            if (iidEq(iid, c.SL_IID_BUFFERQUEUE)) return .BufferQueue;
+            if (iidEq(iid, c.SL_IID_PRESETREVERB)) return .PresetReverb;
+            if (iidEq(iid, c.SL_IID_ENVIRONMENTALREVERB)) return .EnvironmentalReverb;
+            if (iidEq(iid, c.SL_IID_EFFECTSEND)) return .EffectSend;
+            if (iidEq(iid, c.SL_IID_3DGROUPING)) return ._3DGrouping;
+            if (iidEq(iid, c.SL_IID_3DCOMMIT)) return ._3DCommit;
+            if (iidEq(iid, c.SL_IID_3DLOCATION)) return ._3DLocation;
+            if (iidEq(iid, c.SL_IID_3DDOPPLER)) return ._3DDoppler;
+            if (iidEq(iid, c.SL_IID_3DSOURCE)) return ._3DSource;
+            if (iidEq(iid, c.SL_IID_3DMACROSCOPIC)) return ._3DMacroscopic;
+            if (iidEq(iid, c.SL_IID_MUTESOLO)) return .MuteSolo;
+            if (iidEq(iid, c.SL_IID_DYNAMICINTERFACEMANAGEMENT)) return .DynamicInterfaceManagement;
+            if (iidEq(iid, c.SL_IID_MIDIMESSAGE)) return .MidiMessage;
+            if (iidEq(iid, c.SL_IID_MIDITEMPO)) return .MidiTempo;
+            if (iidEq(iid, c.SL_IID_MIDIMUTESOLO)) return .MidiMuteSolo;
+            if (iidEq(iid, c.SL_IID_MIDITIME)) return .MidiTime;
+            if (iidEq(iid, c.SL_IID_AUDIODECODERCAPABILITIES)) return .AudioDecoderCapabilities;
+            if (iidEq(iid, c.SL_IID_AUDIOENCODER)) return .AudioEncoder;
+            if (iidEq(iid, c.SL_IID_AUDIOENCODERCAPABILITIES)) return .AudioEncoderCapabilities;
+            if (iidEq(iid, c.SL_IID_BASSBOOST)) return .BassBoost;
+            if (iidEq(iid, c.SL_IID_PITCH)) return .Pitch;
+            if (iidEq(iid, c.SL_IID_RATEPITCH)) return .RatePitch;
+            if (iidEq(iid, c.SL_IID_VIRTUALIZER)) return .Virtualizer;
+            if (iidEq(iid, c.SL_IID_VISUALIZATION)) return .Visualization;
+            if (iidEq(iid, c.SL_IID_ENGINE)) return .Engine;
+            if (iidEq(iid, c.SL_IID_ENGINECAPABILITIES)) return .EngineCapabilities;
+            if (iidEq(iid, c.SL_IID_THREADSYNC)) return .ThreadSync;
+            if (iidEq(iid, c.SL_IID_ANDROIDEFFECT)) return .AndroidEffect;
+            if (iidEq(iid, c.SL_IID_ANDROIDEFFECTSEND)) return .AndroidEffectSend;
+            if (iidEq(iid, c.SL_IID_ANDROIDEFFECTCAPABILITIES)) return .AndroidEffectCapabilities;
+            if (iidEq(iid, c.SL_IID_ANDROIDCONFIGURATION)) return .AndroidConfiguration;
+            if (iidEq(iid, c.SL_IID_ANDROIDSIMPLEBUFFERQUEUE)) return .AndroidSimpleBufferQueue;
+            if (iidEq(iid, c.SL_IID_ANDROIDBUFFERQUEUESOURCE)) return .AndroidBufferQueueSource;
+            if (iidEq(iid, c.SL_IID_ANDROIDACOUSTICECHOCANCELLATION)) return .AndroidAcousticEchoCancellation;
+            if (iidEq(iid, c.SL_IID_ANDROIDAUTOMATICGAINCONTROL)) return .AndroidAutomaticGainControl;
+            if (iidEq(iid, c.SL_IID_ANDROIDNOISESUPPRESSION)) return .AndroidNoiseSuppresssion;
+            return null;
+        }
+    };
+
 };
