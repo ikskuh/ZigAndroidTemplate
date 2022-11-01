@@ -50,6 +50,7 @@ pub const AndroidApp = struct {
     screen_height: f32 = undefined,
 
     // audio_engine: audio.AudioEngine = .{},
+    simple_synth: SimpleSynth = undefined,
 
     /// This is the entry point which initializes a application
     /// that has stored its previous state.
@@ -221,9 +222,9 @@ pub const AndroidApp = struct {
         std.debug.assert(point.index != null);
         var oldest: *TouchPoint = undefined;
 
-        // if (point.index) |index| {
-        //     self.audio_engine.setToneOn(@intCast(usize, index), true);
-        // }
+        if (point.index) |index| {
+            self.simple_synth.oscillators[@intCast(usize, index)].setWaveOn(true);
+        }
 
         for (self.touch_points) |*opt, i| {
             if (opt.*) |*pt| {
@@ -374,13 +375,25 @@ pub const AndroidApp = struct {
         //     app_log.info("Couldn't start audio engine", .{});
         // }
         // defer _ = self.audio_engine.stop();
+
         audio.OpenSL.init() catch |e| {
             app_log.err("OpenSL init error: {s}", .{@errorName(e)});
         };
-        audio.OpenSL.play_test() catch |e| {
-            app_log.err("OpenSL play_test error: {s}", .{@errorName(e)});
-        };
         defer audio.OpenSL.deinit();
+
+        self.simple_synth = SimpleSynth.init();
+
+        var output_stream = try audio.OpenSL.getOutputStream(self.allocator, .{
+            .sample_format = .Int16,
+            .callback = SimpleSynth.audioCallback,
+            .user_data = &self.simple_synth,
+        });
+        defer {
+            output_stream.stop() catch {};
+            output_stream.deinit(self.allocator);
+        }
+
+        try output_stream.start();
 
         // Graphics
         const GLuint = c.GLuint;
@@ -636,9 +649,9 @@ pub const AndroidApp = struct {
 
                             point.intensity -= 0.05;
                             if (point.intensity <= 0.0) {
-                                // if (point.index) |index| {
-                                //     self.audio_engine.setToneOn(@intCast(usize, index), false);
-                                // }
+                                if (point.index) |index| {
+                                    self.simple_synth.oscillators[@intCast(usize, index)].setWaveOn(false);
+                                }
                                 pt.* = null;
                             }
                         }
@@ -833,3 +846,68 @@ pub fn debugMessageCallback(
     };
     app_log.err("source = {}, type = {s}, id = {}, severity = {}, message = {s}", .{ source, logtype_str, id, severity, message });
 }
+
+const Oscillator = struct {
+    isWaveOn: bool = false,
+    phase: f64 = 0.0,
+    phaseIncrement: f64 = 0,
+    frequency: f64 = 440,
+    amplitude: f64 = 0.1,
+
+    fn setWaveOn(self: *@This(), isWaveOn: bool) void {
+        @atomicStore(bool, &self.isWaveOn, isWaveOn, .SeqCst);
+    }
+
+    fn setSampleRate(self: *@This(), sample_rate: i32) void {
+        self.phaseIncrement = (std.math.tau * self.frequency) / @intToFloat(f64, sample_rate);
+    }
+
+    fn renderf32(self: *@This(), audio_data: []f32) void {
+        if (!@atomicLoad(bool, &self.isWaveOn, .SeqCst)) self.phase = 0;
+
+        for (audio_data) |*frame| {
+            if (@atomicLoad(bool, &self.isWaveOn, .SeqCst)) {
+                frame.* += @floatCast(f32, std.math.sin(self.phase) * self.amplitude);
+                self.phase += self.phaseIncrement;
+                if (self.phase > std.math.tau) self.phase -= std.math.tau;
+            }
+        }
+    }
+
+    fn renderi16(self: *@This(), audio_data: []i16) void {
+        if (!@atomicLoad(bool, &self.isWaveOn, .SeqCst)) self.phase = 0;
+
+        for (audio_data) |*frame| {
+            if (@atomicLoad(bool, &self.isWaveOn, .SeqCst)) {
+                frame.* +|= @floatToInt(i16, @floatCast(f32, std.math.sin(self.phase) * self.amplitude) * std.math.maxInt(i16));
+                self.phase += self.phaseIncrement;
+                if (self.phase > std.math.tau) self.phase -= std.math.tau;
+            }
+        }
+    }
+};
+
+const SimpleSynth = struct {
+    oscillators: [10]Oscillator = [1]Oscillator{.{}} ** 10,
+
+    fn init() SimpleSynth {
+        var synth = SimpleSynth{};
+        for (synth.oscillators) |*osc, index| {
+            osc.* = Oscillator{
+                .frequency = audio.midiToFreq(49 + index * 3),
+                .amplitude = audio.dBToAmplitude(-@intToFloat(f64, index) - 15),
+            };
+        }
+        return synth;
+    }
+
+    fn audioCallback(stream: audio.StreamLayout, user_data: *anyopaque) void {
+        var synth = @ptrCast(*SimpleSynth, @alignCast(@alignOf(SimpleSynth), user_data));
+        std.debug.assert(stream.buffer == .Int16);
+
+        for (synth.oscillators) |*osc| {
+            osc.setSampleRate(@intCast(i32, stream.sample_rate));
+            osc.renderi16(stream.buffer.Int16);
+        }
+    }
+};

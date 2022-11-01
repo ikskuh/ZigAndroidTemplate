@@ -5,146 +5,137 @@ const android = @import("android");
 const JNI = android.JNI;
 const c = android.egl.c;
 
-const app_log = std.log.scoped(.audio);
+const audio_log = std.log.scoped(.audio);
 
-const Oscillator = struct {
-    isWaveOn: bool,
-    phase: f64 = 0.0,
-    phaseIncrement: f64 = 0,
-    frequency: f64 = 440,
-    amplitude: f64 = 0.1,
-    fn setWaveOn(self: *@This(), isWaveOn: bool) void {
-        @atomicStore(bool, &self.isWaveOn, isWaveOn, .SeqCst);
-    }
-    fn setSampleRate(self: *@This(), sample_rate: i32) void {
-        self.phaseIncrement = (std.math.tau * self.frequency) / @intToFloat(f64, sample_rate);
-    }
-    fn render(self: *@This(), audio_data: []f32) void {
-        if (!@atomicLoad(bool, &self.isWaveOn, .SeqCst)) self.phase = 0;
+// pub const AudioEngine = struct {
+//     oscillators: [10]Oscillator = undefined,
+//     stream: ?*c.AAudioStream = null,
 
-        for (audio_data) |*frame| {
-            if (@atomicLoad(bool, &self.isWaveOn, .SeqCst)) {
-                frame.* += @floatCast(f32, std.math.sin(self.phase) * self.amplitude);
-                self.phase += self.phaseIncrement;
-                if (self.phase > std.math.tau) self.phase -= std.math.tau;
-            }
-        }
-    }
-};
+//     const buffer_size_in_bursts = 2;
 
-pub const AudioEngine = struct {
-    oscillators: [10]Oscillator = undefined,
-    stream: ?*c.AAudioStream = null,
+//     fn dataCallback(
+//         stream: ?*c.AAudioStream,
+//         user_data: ?*anyopaque,
+//         audio_data: ?*anyopaque,
+//         num_frames: i32,
+//     ) callconv(.C) c.aaudio_data_callback_result_t {
+//         _ = stream;
+//         const audio_engine = @ptrCast(*AudioEngine, @alignCast(@alignOf(AudioEngine), user_data.?));
+//         const audio_slice = @ptrCast([*]f32, @alignCast(@alignOf(f32), audio_data.?))[0..@intCast(usize, num_frames)];
+//         for (audio_slice) |*frame| {
+//             frame.* = 0;
+//         }
+//         for (audio_engine.oscillators) |*oscillator| {
+//             oscillator.render(audio_slice);
+//         }
+//         return c.AAUDIO_CALLBACK_RESULT_CONTINUE;
+//     }
 
-    const buffer_size_in_bursts = 2;
+//     fn errorCallback(
+//         stream: ?*c.AAudioStream,
+//         user_data: ?*anyopaque,
+//         err: c.aaudio_result_t,
+//     ) callconv(.C) void {
+//         _ = stream;
+//         if (err == c.AAUDIO_ERROR_DISCONNECTED) {
+//             const self = @ptrCast(*AudioEngine, @alignCast(@alignOf(AudioEngine), user_data.?));
+//             _ = std.Thread.spawn(.{}, restart, .{self}) catch {
+//                 audio_log.err("Couldn't spawn thread", .{});
+//             };
+//         }
+//     }
 
-    fn dataCallback(
-        stream: ?*c.AAudioStream,
-        user_data: ?*anyopaque,
-        audio_data: ?*anyopaque,
-        num_frames: i32,
-    ) callconv(.C) c.aaudio_data_callback_result_t {
-        _ = stream;
-        const audio_engine = @ptrCast(*AudioEngine, @alignCast(@alignOf(AudioEngine), user_data.?));
-        const audio_slice = @ptrCast([*]f32, @alignCast(@alignOf(f32), audio_data.?))[0..@intCast(usize, num_frames)];
-        for (audio_slice) |*frame| {
-            frame.* = 0;
-        }
-        for (audio_engine.oscillators) |*oscillator| {
-            oscillator.render(audio_slice);
-        }
-        return c.AAUDIO_CALLBACK_RESULT_CONTINUE;
-    }
+//     pub fn start(self: *@This()) bool {
+//         var stream_builder: ?*c.AAudioStreamBuilder = null;
+//         _ = c.AAudio_createStreamBuilder(&stream_builder);
+//         defer _ = c.AAudioStreamBuilder_delete(stream_builder);
 
-    fn errorCallback(
-        stream: ?*c.AAudioStream,
-        user_data: ?*anyopaque,
-        err: c.aaudio_result_t,
-    ) callconv(.C) void {
-        _ = stream;
-        if (err == c.AAUDIO_ERROR_DISCONNECTED) {
-            const self = @ptrCast(*AudioEngine, @alignCast(@alignOf(AudioEngine), user_data.?));
-            _ = std.Thread.spawn(.{}, restart, .{self}) catch {
-                app_log.err("Couldn't spawn thread", .{});
-            };
-        }
-    }
+//         c.AAudioStreamBuilder_setFormat(stream_builder, c.AAUDIO_FORMAT_PCM_FLOAT);
+//         c.AAudioStreamBuilder_setChannelCount(stream_builder, 1);
+//         c.AAudioStreamBuilder_setPerformanceMode(stream_builder, c.AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
+//         c.AAudioStreamBuilder_setDataCallback(stream_builder, dataCallback, self);
+//         c.AAudioStreamBuilder_setErrorCallback(stream_builder, errorCallback, self);
 
-    pub fn start(self: *@This()) bool {
-        var stream_builder: ?*c.AAudioStreamBuilder = null;
-        _ = c.AAudio_createStreamBuilder(&stream_builder);
-        defer _ = c.AAudioStreamBuilder_delete(stream_builder);
+//         {
+//             const result = c.AAudioStreamBuilder_openStream(stream_builder, &self.stream);
+//             if (result != c.AAUDIO_OK) {
+//                 audio_log.err("Error opening stream {s}", .{c.AAudio_convertResultToText(result)});
+//                 return false;
+//             }
+//         }
 
-        c.AAudioStreamBuilder_setFormat(stream_builder, c.AAUDIO_FORMAT_PCM_FLOAT);
-        c.AAudioStreamBuilder_setChannelCount(stream_builder, 1);
-        c.AAudioStreamBuilder_setPerformanceMode(stream_builder, c.AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
-        c.AAudioStreamBuilder_setDataCallback(stream_builder, dataCallback, self);
-        c.AAudioStreamBuilder_setErrorCallback(stream_builder, errorCallback, self);
+//         const sample_rate = c.AAudioStream_getSampleRate(self.stream);
+//         for (self.oscillators) |*oscillator, index| {
+//             oscillator.* = Oscillator{
+//                 .isWaveOn = false,
+//                 .frequency = midiToFreq(49 + index * 3),
+//                 .amplitude = dBToAmplitude(-@intToFloat(f64, index) - 11),
+//             };
+//             oscillator.setSampleRate(sample_rate);
+//         }
 
-        {
-            const result = c.AAudioStreamBuilder_openStream(stream_builder, &self.stream);
-            if (result != c.AAUDIO_OK) {
-                app_log.err("Error opening stream {s}", .{c.AAudio_convertResultToText(result)});
-                return false;
-            }
-        }
+//         _ = c.AAudioStream_setBufferSizeInFrames(self.stream, c.AAudioStream_getFramesPerBurst(self.stream) * buffer_size_in_bursts);
 
-        const sample_rate = c.AAudioStream_getSampleRate(self.stream);
-        for (self.oscillators) |*oscillator, index| {
-            oscillator.* = Oscillator{
-                .isWaveOn = false,
-                .frequency = midiToFreq(49 + index * 3),
-                .amplitude = dBToAmplitude(-@intToFloat(f64, index) - 11),
-            };
-            oscillator.setSampleRate(sample_rate);
-        }
+//         {
+//             const result = c.AAudioStream_requestStart(self.stream);
+//             if (result != c.AAUDIO_OK) {
+//                 audio_log.err("Error starting stream {s}", .{c.AAudio_convertResultToText(result)});
+//                 return false;
+//             }
+//         }
 
-        _ = c.AAudioStream_setBufferSizeInFrames(self.stream, c.AAudioStream_getFramesPerBurst(self.stream) * buffer_size_in_bursts);
+//         return true;
+//     }
 
-        {
-            const result = c.AAudioStream_requestStart(self.stream);
-            if (result != c.AAUDIO_OK) {
-                app_log.err("Error starting stream {s}", .{c.AAudio_convertResultToText(result)});
-                return false;
-            }
-        }
+//     var restartingLock = std.Thread.Mutex{};
+//     pub fn restart(self: *@This()) void {
+//         if (restartingLock.tryLock()) {
+//             self.stop();
+//             _ = self.start();
+//             restartingLock.unlock();
+//         }
+//     }
 
-        return true;
-    }
+//     pub fn stop(self: *@This()) void {
+//         if (self.stream) |stream| {
+//             _ = c.AAudioStream_requestStop(stream);
+//             _ = c.AAudioStream_close(stream);
+//         }
+//     }
 
-    var restartingLock = std.Thread.Mutex{};
-    pub fn restart(self: *@This()) void {
-        if (restartingLock.tryLock()) {
-            self.stop();
-            _ = self.start();
-            restartingLock.unlock();
-        }
-    }
+//     pub fn setToneOn(self: *@This(), which: usize, isToneOn: bool) void {
+//         // if (which >= self.oscillators.len) return;
+//         self.oscillators[which].setWaveOn(isToneOn);
+//     }
+// };
 
-    pub fn stop(self: *@This()) void {
-        if (self.stream) |stream| {
-            _ = c.AAudioStream_requestStop(stream);
-            _ = c.AAudioStream_close(stream);
-        }
-    }
-
-    pub fn setToneOn(self: *@This(), which: usize, isToneOn: bool) void {
-        // if (which >= self.oscillators.len) return;
-        self.oscillators[which].setWaveOn(isToneOn);
-    }
-};
-
-fn midiToFreq(note: usize) f64 {
+pub fn midiToFreq(note: usize) f64 {
     return std.math.pow(f64, 2, (@intToFloat(f64, note) - 49) / 12) * 440;
 }
 
-fn amplitudeTodB(amplitude: f64) f64 {
+pub fn amplitudeTodB(amplitude: f64) f64 {
     return 20.0 * std.math.log10(amplitude);
 }
 
-fn dBToAmplitude(dB: f64) f64 {
+pub fn dBToAmplitude(dB: f64) f64 {
     return std.math.pow(f64, 10.0, dB / 20.0);
 }
+
+pub fn lerp(v0: f64, v1: f64, t: f64) f64 {
+    return v0 + t * (v1 - v0);
+}
+
+pub const StreamLayout = struct {
+    sample_rate: u32,
+    channel_count: usize,
+    buffer: union(enum) {
+        Uint8: []u8,
+        Int16: []i16,
+        Float32: []f32,
+    },
+};
+
+const StreamCallbackFn = *const fn (StreamLayout, *anyopaque) void;
 
 // OpenSLES support
 pub const OpenSL = struct {
@@ -153,18 +144,7 @@ pub const OpenSL = struct {
     var engine: c.SLEngineItf = undefined;
 
     var output_mix: c.SLObjectItf = undefined;
-
-    var player: c.SLObjectItf = undefined;
-    var play_itf: c.SLPlayItf = undefined;
-    var buffer_queue_itf: c.SLAndroidSimpleBufferQueueItf = undefined;
-    var state: c.SLAndroidSimpleBufferQueueState = undefined;
-
-    var audio_sink: c.SLDataSink = undefined;
-    var locator_outputmix: c.SLDataLocator_OutputMix = undefined;
-
-    var audio_source: c.SLDataSource = undefined;
-    var buffer_queue: c.SLDataLocator_BufferQueue = undefined;
-    var pcm: c.SLDataFormat_PCM = undefined;
+    var output_mix_itf: c.SLOutputMixItf = undefined;
 
     // Local storage for audio data in 16 bit words
     const audio_data_storage_size = 4096;
@@ -174,42 +154,104 @@ pub const OpenSL = struct {
     // Local storage for audio data
     var pcm_data: [audio_data_storage_size]c.SLint16 = undefined;
 
-    const CallbackContext = struct {
+    pub const OutputStream = struct {
+        config: OutputStreamConfig,
+        player: c.SLObjectItf,
         play_itf: c.SLPlayItf,
-        /// Base buffer of local audio data storage
-        data_base: []c.SLint16,
-        /// Current location in local audio data storage
-        data_index: usize,
-        last_played_buffer: usize = 0,
-        phase: f64 = 0.0,
-        phaseIncrement: f64 = 0,
-        frequency: f64 = 440,
-        amplitude: f64 = 0.1,
+        buffer_queue_itf: c.SLAndroidSimpleBufferQueueItf,
+        state: c.SLAndroidSimpleBufferQueueState,
+
+        audio_sink: c.SLDataSink,
+        locator_outputmix: c.SLDataLocator_OutputMix,
+
+        audio_source: c.SLDataSource,
+        buffer_queue: c.SLDataLocator_BufferQueue,
+        pcm: c.SLDataFormat_PCM,
+
+        buffer: []i16,
+        buffer_index: usize,
         mutex: std.Thread.Mutex,
 
-        fn setSampleRate(self: *@This(), sample_rate: i32) void {
-            self.phaseIncrement = (std.math.tau * self.frequency) / @intToFloat(f64, sample_rate);
+        // Must be initialized using OpenSL.getOutputStream
+
+        pub fn stop(output_stream: *OutputStream) !void {
+            try checkResult(output_stream.play_itf.*.*.SetPlayState.?(output_stream.play_itf, c.SL_PLAYSTATE_STOPPED));
+        }
+
+        pub fn deinit(output_stream: *OutputStream, alloc: std.mem.Allocator) void {
+            output_stream.player.*.*.Destroy.?(output_stream.player);
+            alloc.free(output_stream.buffer);
+        }
+
+        pub fn start(output_stream: *OutputStream) !void {
+            // Get player interface
+            try checkResult(output_stream.player.*.*.GetInterface.?(
+                output_stream.player,
+                c.SL_IID_PLAY,
+                @ptrCast(*anyopaque, &output_stream.play_itf),
+            ));
+
+            // Get buffer queue interface
+            try checkResult(output_stream.player.*.*.GetInterface.?(
+                output_stream.player,
+                c.SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+                @ptrCast(*anyopaque, &output_stream.buffer_queue_itf),
+            ));
+
+            // Register callback
+            try checkResult(output_stream.buffer_queue_itf.*.*.RegisterCallback.?(
+                output_stream.buffer_queue_itf,
+                bufferQueueCallback,
+                @ptrCast(*anyopaque, output_stream),
+            ));
+
+            // Enqueue a few buffers to get the ball rollng
+            var i: usize = 0;
+            while (i < output_stream.config.buffer_count) : (i += 1) {
+                try checkResult(output_stream.buffer_queue_itf.*.*.Enqueue.?(
+                    output_stream.buffer_queue_itf,
+                    &output_stream.buffer[output_stream.buffer_index],
+                    @intCast(u32, output_stream.config.buffer_size * output_stream.pcm.containerSize),
+                ));
+                output_stream.buffer_index += output_stream.buffer_index;
+            }
+
+            // Start playing queued audio buffers
+            try checkResult(output_stream.play_itf.*.*.SetPlayState.?(output_stream.play_itf, c.SL_PLAYSTATE_PLAYING));
         }
     };
 
     pub fn bufferQueueCallback(queue_itf: c.SLAndroidSimpleBufferQueueItf, user_data: ?*anyopaque) callconv(.C) void {
-        var context = @ptrCast(*CallbackContext, @alignCast(@alignOf(CallbackContext), user_data));
-        context.mutex.lock();
-        defer context.mutex.unlock();
-        if (context.data_index < context.data_base.len) {
-            var buffer = context.data_base[context.data_index..context.data_index + audio_data_buffer_size];
-            var i: usize = 0;
-            while (i < buffer.len) {
-                buffer[i] = 0;
-                buffer[i] +|= @floatToInt(i16, (std.math.sin(context.phase) * context.amplitude * (std.math.maxInt(i16))));
-                i += 1;
-                context.phase += context.phaseIncrement;
-                if (context.phase > std.math.tau) context.phase -= std.math.tau;
+        var output_stream = @ptrCast(*OutputStream, @alignCast(@alignOf(OutputStream), user_data));
+
+        // Lock the mutex to prevent race conditions
+        output_stream.mutex.lock();
+        defer output_stream.mutex.unlock();
+
+        if (output_stream.buffer_index < output_stream.buffer.len) {
+            var buffer = output_stream.buffer[output_stream.buffer_index .. output_stream.buffer_index + output_stream.config.buffer_size];
+
+            for (buffer) |*frame| {
+                frame.* = 0;
             }
-            checkResult(queue_itf.*.*.Enqueue.?(queue_itf, @ptrCast(*anyopaque, buffer.ptr), @intCast(c.SLuint32, 2 * buffer.len))) catch |e| {
-                app_log.err("Error enqueueing buffer! {s}", .{@errorName(e)});
+
+            var stream_layout = StreamLayout{
+                .sample_rate = output_stream.pcm.samplesPerSec / 1000,
+                .channel_count = output_stream.pcm.numChannels,
+                .buffer = .{ .Int16 = buffer },
             };
-            context.data_index = (context.data_index + audio_data_buffer_size) % context.data_base.len;
+
+            output_stream.config.callback(stream_layout, output_stream.config.user_data);
+
+            checkResult(queue_itf.*.*.Enqueue.?(
+                queue_itf,
+                @ptrCast(*anyopaque, buffer.ptr),
+                @intCast(c.SLuint32, (output_stream.pcm.containerSize / 8) * buffer.len),
+            )) catch |e| {
+                audio_log.err("Error enqueueing buffer! {s}", .{@errorName(e)});
+            };
+
+            output_stream.buffer_index = (output_stream.buffer_index + output_stream.config.buffer_size) % output_stream.buffer.len;
         }
     }
 
@@ -230,139 +272,132 @@ pub const OpenSL = struct {
             try checkResult(engine_object.*.*.GetInterface.?(engine_object, c.SL_IID_ENGINE, @ptrCast(*anyopaque, &engine)));
             try printEngineInterfaces();
             try printEngineExtensions();
+
+            // Get OutputMix object
+            try checkResult(engine.*.*.CreateOutputMix.?(engine, &output_mix, 0, null, null));
+            try checkResult(output_mix.*.*.Realize.?(output_mix, c.SL_BOOLEAN_FALSE));
+            errdefer output_mix.*.*.Destroy.?(output_mix);
+
+            // Get OutputMix interface
+            try checkResult(output_mix.*.*.GetInterface.?(output_mix, c.SL_IID_OUTPUTMIX, @ptrCast(*anyopaque, &output_mix_itf)));
         }
     }
 
     pub fn deinit() void {
         std.debug.assert(init_sl_counter > 0);
 
-        if (thread) |t| {
-            t.join();
-            thread = null;
-        }
-
         // spinlock lock
         {
             init_sl_counter -= 1;
             if (init_sl_counter == 0) {
+                output_mix.*.*.Destroy.?(output_mix);
                 engine_object.*.*.Destroy.?(engine_object);
             }
         }
         // spinlock unlock
     }
 
-    var thread: ?std.Thread = null;
+    pub const OutputStreamConfig = struct {
+        sample_rate: u32 = 44100,
+        sample_format: enum {
+            Uint8,
+            Int16,
+            Float32,
+        },
+        buffer_size: usize = 256,
+        buffer_count: usize = 4,
+        channel_count: usize = 1,
+        callback: StreamCallbackFn,
+        user_data: *anyopaque,
+    };
 
-    pub fn play_test() !void {
-        if (thread == null) {
-            thread = try std.Thread.spawn(.{}, play_thread_handler, .{});
+    pub fn getOutputStream(allocator: std.mem.Allocator, config: OutputStreamConfig) !*OutputStream {
+        // TODO: support multiple formats
+        std.debug.assert(config.sample_format == .Int16);
+
+        // Allocate memory for audio buffer
+        var buffers = try allocator.alloc(i16, config.buffer_size * config.buffer_count);
+        errdefer allocator.free(buffers);
+
+        for (buffers) |*sample| {
+            sample.* = 0;
         }
-    }
-
-    pub fn play_thread_handler() !void {
-        play_thread() catch |e| {
-            app_log.info("play_test error: {s}", .{@errorName(e)});
-        };
-    }
-
-    pub fn play_thread() !void {
-        app_log.info("Start play test", .{});
-        const max_interfaces = 3;
-        var required: [max_interfaces]c.SLboolean = .{c.SL_BOOLEAN_FALSE} ** max_interfaces;
-        var iid_array: [max_interfaces]c.SLInterfaceID = .{c.SL_IID_NULL} ** max_interfaces;
-
-        // Get OutputMix object
-        try checkResult(engine.*.*.CreateOutputMix.?(engine, &output_mix, 1, &iid_array, &required));
-        app_log.info("Created output mix", .{});
-        try checkResult(output_mix.*.*.Realize.?(output_mix, c.SL_BOOLEAN_FALSE));
-        app_log.info("Realized output mix", .{});
-        defer output_mix.*.*.Destroy.?(output_mix);
-
-        var output_mix_itf: c.SLOutputMixItf = undefined;
-        try checkResult(output_mix.*.*.GetInterface.?(output_mix, c.SL_IID_OUTPUTMIX, @ptrCast(*anyopaque, &output_mix_itf)));
-        // defer output_mix_itf.*.*.Destroy.?();
-        var output_device_ids: [10]c.SLuint32 = undefined;
-        var output_device_num: c.SLint32 = 10;
-        try checkResult(output_mix_itf.*.*.GetDestinationOutputDeviceIDs.?(output_mix_itf, &output_device_num, &output_device_ids));
-        for (output_device_ids[0..@intCast(usize, output_device_num)]) |id| {
-            // var descriptor: c.SLAudioOutputDescriptor = undefined;
-            // try checkResult(output_mix_itf.*.*.QueryAudioOutputCapabilities.?(output_mix_itf, id, &descriptor));
-            app_log.info("Output mix device id: {}", .{id});
-        }
-
-        buffer_queue.locatorType = c.SL_DATALOCATOR_BUFFERQUEUE;
-        buffer_queue.numBuffers = 4;
-
-        // Setup the format of the content in the buffer queue
-        pcm.formatType = c.SL_DATAFORMAT_PCM;
-        pcm.numChannels = 1;
-        pcm.samplesPerSec = c.SL_SAMPLINGRATE_44_1;
-        pcm.bitsPerSample = c.SL_PCMSAMPLEFORMAT_FIXED_16;
-        pcm.containerSize = 16;
-        pcm.channelMask = c.SL_SPEAKER_FRONT_CENTER;
-        pcm.endianness = c.SL_BYTEORDER_LITTLEENDIAN;
-
-        audio_source.pFormat = @ptrCast(*anyopaque, &pcm);
-        audio_source.pLocator = @ptrCast(*anyopaque, &buffer_queue);
-
-        // Setup the data sink structure
-        locator_outputmix.locatorType = c.SL_DATALOCATOR_OUTPUTMIX;
-        locator_outputmix.outputMix = output_mix;
-
-        audio_sink.pLocator = @ptrCast(*anyopaque, &locator_outputmix);
-        audio_sink.pFormat = null;
 
         // Initialize the context for Buffer queue callbacks
-        var context = CallbackContext{
+        var output_stream: *OutputStream = try allocator.create(OutputStream);
+        output_stream.* = OutputStream{
+            // We don't have these values yet
+            .player = undefined,
             .play_itf = undefined,
-            .data_base = pcm_data[0..],
-            .data_index = 0,
+            .state = undefined,
+            .buffer_queue_itf = undefined,
+
+            // Store user defined callback information
+            .config = config,
+
+            // Store pointer to audio buffer
+            .buffer = buffers,
+            .buffer_index = 0,
+
+            // Setup the format of the content in the buffer queue
+            .buffer_queue = .{
+                .locatorType = c.SL_DATALOCATOR_BUFFERQUEUE,
+                .numBuffers = @intCast(u32, config.buffer_count),
+            },
+            .pcm = .{
+                .formatType = c.SL_DATAFORMAT_PCM,
+                .numChannels = @intCast(u32, config.channel_count),
+                .samplesPerSec = config.sample_rate * 1000, // OpenSL ES uses milliHz instead of Hz, for some reason
+                .bitsPerSample = switch (config.sample_format) {
+                    .Uint8 => c.SL_PCMSAMPLEFORMAT_FIXED_8,
+                    .Int16 => c.SL_PCMSAMPLEFORMAT_FIXED_16,
+                    .Float32 => c.SL_PCMSAMPLEFORMAT_FIXED_32,
+                },
+                .containerSize = switch (config.sample_format) {
+                    .Uint8 => 8,
+                    .Int16 => 16,
+                    .Float32 => 32,
+                },
+                .channelMask = c.SL_SPEAKER_FRONT_CENTER, // TODO
+                .endianness = c.SL_BYTEORDER_LITTLEENDIAN, // TODO
+
+            },
+
+            // Configure audio source
+            .audio_source = .{
+                .pFormat = @ptrCast(*anyopaque, &output_stream.pcm),
+                .pLocator = @ptrCast(*anyopaque, &output_stream.buffer_queue),
+            },
+            .locator_outputmix = .{
+                .locatorType = c.SL_DATALOCATOR_OUTPUTMIX,
+                .outputMix = output_mix,
+            },
+            // Configure audio output
+            .audio_sink = .{
+                .pLocator = @ptrCast(*anyopaque, &output_stream.locator_outputmix),
+                .pFormat = null,
+            },
+
+            // Thread safety
             .mutex = std.Thread.Mutex{},
         };
-        context.setSampleRate(44100);
-
-        // Set arrays required and iid_array for SEEK interface (PlayItf is implicit)
-        required[0] = c.SL_BOOLEAN_TRUE;
-        iid_array[0] = c.SL_IID_BUFFERQUEUE;
 
         // Create the music player
-        try checkResult(engine.*.*.CreateAudioPlayer.?(engine, &player, &audio_source, &audio_sink, 1, &iid_array, &required));
-        try checkResult(player.*.*.Realize.?(player, c.SL_BOOLEAN_FALSE));
-        defer player.*.*.Destroy.?(player);
-        try checkResult(player.*.*.GetInterface.?(player, c.SL_IID_PLAY, @ptrCast(*anyopaque, &play_itf)));
-        try checkResult(player.*.*.GetInterface.?(player, c.SL_IID_ANDROIDSIMPLEBUFFERQUEUE, @ptrCast(*anyopaque, &buffer_queue_itf)));
-        try checkResult(buffer_queue_itf.*.*.RegisterCallback.?(buffer_queue_itf, bufferQueueCallback, @ptrCast(*anyopaque, &context))); // Register callback
+        try checkResult(engine.*.*.CreateAudioPlayer.?(
+            engine,
+            &output_stream.player,
+            &output_stream.audio_source,
+            &output_stream.audio_sink,
+            1,
+            &[_]c.SLInterfaceID{c.SL_IID_BUFFERQUEUE},
+            &[_]c.SLboolean{c.SL_BOOLEAN_TRUE},
+        ));
 
-        // Enqueue a few buffers to get the ball rollng
-        try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
-        context.last_played_buffer = context.data_index / audio_data_buffer_size;
-        context.data_index += audio_data_buffer_size;
-        try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
-        context.last_played_buffer = context.data_index / audio_data_buffer_size;
-        context.data_index += audio_data_buffer_size;
-        try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
-        context.last_played_buffer = context.data_index / audio_data_buffer_size;
-        context.data_index += audio_data_buffer_size;
-        try checkResult(buffer_queue_itf.*.*.Enqueue.?(buffer_queue_itf, &context.data_base[context.data_index], 2 * audio_data_buffer_size));
-        context.last_played_buffer = context.data_index / audio_data_buffer_size;
-        context.data_index += audio_data_buffer_size;
+        // Realize the player interface
+        try checkResult(output_stream.player.*.*.Realize.?(output_stream.player, c.SL_BOOLEAN_FALSE));
 
-        try checkResult(play_itf.*.*.SetPlayState.?(play_itf, c.SL_PLAYSTATE_PLAYING));
-
-        // Wait until the PCM data is done playing, the buffer queue callback
-        // will continue to queue buffers until the entire PCM data has been
-        // played. This is indicated by waiting for the count member of the
-        // SLBufferQueueState to go to zero.
-        try checkResult(buffer_queue_itf.*.*.GetState.?(buffer_queue_itf, &state));
-
-        while (state.count > 0) {
-            try checkResult(buffer_queue_itf.*.*.GetState.?(buffer_queue_itf, &state));
-            // app_log.info("state count {}", .{state.count});
-        }
-        app_log.info("end get buffer queue state loop", .{});
-
-        try checkResult(play_itf.*.*.SetPlayState.?(play_itf, c.SL_PLAYSTATE_STOPPED));
-        app_log.info("set play state stopped", .{});
+        // Return to user for them to start
+        return output_stream;
     }
 
     const Result = enum(u32) {
@@ -439,7 +474,7 @@ pub const OpenSL = struct {
                 try checkResult(c.slQuerySupportedEngineInterfaces(i, &interface_id));
                 const interface_tag = InterfaceID.fromIid(interface_id);
                 if (interface_tag) |tag| {
-                    app_log.info("OpenSL engine interface id: {s}", .{@tagName(tag)});
+                    audio_log.info("OpenSL engine interface id: {s}", .{@tagName(tag)});
                 }
             }
         }
@@ -455,7 +490,7 @@ pub const OpenSL = struct {
                 var extension_size: c.SLint16 = 4096;
                 try checkResult(engine.*.*.QuerySupportedExtension.?(engine, i, &extension_ptr, &extension_size));
                 var extension_name = extension_ptr[0..@intCast(usize, extension_size)];
-                app_log.info("OpenSL engine extension {}: {s}", .{ i, extension_name });
+                audio_log.info("OpenSL engine extension {}: {s}", .{ i, extension_name });
             }
         }
     }
@@ -470,14 +505,13 @@ pub const OpenSL = struct {
                 try checkResult(engine.*.*.QuerySupportedInterfaces.?(engine, c.SL_OBJECTID_ENGINE, i, &interface_id));
                 const interface_tag = InterfaceID.fromIid(interface_id);
                 if (interface_tag) |tag| {
-                    app_log.info("OpenSL engine interface id: {s}", .{@tagName(tag)});
+                    audio_log.info("OpenSL engine interface id: {s}", .{@tagName(tag)});
                 } else {
-                    app_log.info("Unknown engine interface id: {}", .{interface_id.*});
+                    audio_log.info("Unknown engine interface id: {}", .{interface_id.*});
                 }
             }
         }
     }
-
 
     fn iidEq(iid1: c.SLInterfaceID, iid2: c.SLInterfaceID) bool {
         return iid1.*.time_low == iid2.*.time_low and
@@ -598,5 +632,4 @@ pub const OpenSL = struct {
             return null;
         }
     };
-
 };
