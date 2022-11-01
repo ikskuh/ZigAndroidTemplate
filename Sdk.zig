@@ -16,6 +16,15 @@ fn sdkRoot() *const [sdkRootIntern().len]u8 {
     return buffer[0..buffer.len];
 }
 
+// linux-x86_64
+pub fn toolchainHostTag() []const u8 {
+    comptime {
+        const os = builtin.os.tag;
+        const arch = builtin.cpu.arch;
+        return @tagName(os) ++ "-" ++ @tagName(arch);
+    }
+}
+
 /// This file encodes a instance of an Android SDK interface.
 const Sdk = @This();
 
@@ -326,7 +335,7 @@ const NdkVersionRange = struct {
     }
 };
 
-// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/arm-linux-androideabi | code
+// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/${hosttag}/sysroot/usr/lib/arm-linux-androideabi | code
 const arm_ndk_ranges = [_]NdkVersionRange{
     NdkVersionRange{ .ndk = "19.2.5345600", .min = 16, .max = 28 },
     NdkVersionRange{ .ndk = "20.1.5948944", .min = 16, .max = 29 },
@@ -337,7 +346,7 @@ const arm_ndk_ranges = [_]NdkVersionRange{
     NdkVersionRange{ .ndk = "25.1.8937393", .min = 19, .max = 33 },
 };
 
-// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/i686* | code
+// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/${hosttag}/sysroot/usr/lib/i686* | code
 const i686_ndk_ranges = [_]NdkVersionRange{
     NdkVersionRange{ .ndk = "19.2.5345600", .min = 16, .max = 28 },
     NdkVersionRange{ .ndk = "20.1.5948944", .min = 16, .max = 29 },
@@ -348,7 +357,7 @@ const i686_ndk_ranges = [_]NdkVersionRange{
     NdkVersionRange{ .ndk = "25.1.8937393", .min = 19, .max = 33 },
 };
 
-// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/x86_64-linux-android | code
+// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/${hosttag}/sysroot/usr/lib/x86_64-linux-android | code
 const x86_64_ndk_ranges = [_]NdkVersionRange{
     NdkVersionRange{ .ndk = "19.2.5345600", .min = 21, .max = 28 },
     NdkVersionRange{ .ndk = "20.1.5948944", .min = 21, .max = 29 },
@@ -359,7 +368,7 @@ const x86_64_ndk_ranges = [_]NdkVersionRange{
     NdkVersionRange{ .ndk = "25.1.8937393", .min = 21, .max = 33 },
 };
 
-// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android | code
+// ls ~/software/android-sdk/ndk/*/toolchains/llvm/prebuilt/${hosttag}/sysroot/usr/lib/aarch64-linux-android | code
 const aarch64_ndk_ranges = [_]NdkVersionRange{
     NdkVersionRange{ .ndk = "19.2.5345600", .min = 21, .max = 28 },
     NdkVersionRange{ .ndk = "20.1.5948944", .min = 21, .max = 29 },
@@ -761,13 +770,23 @@ pub fn compileAppLibrary(
         },
     };
 
-    const lib_dir = sdk.b.fmt("{s}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/{s}/{d}/", .{
+    const lib_dir = sdk.b.fmt("{s}/toolchains/llvm/prebuilt/{s}/sysroot/usr/lib/{s}/{d}/", .{
         ndk_root,
+        toolchainHostTag(),
         config.lib_dir,
         @enumToInt(app_config.target_version),
     });
 
-    const include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ ndk_root, "toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include" }) catch unreachable;
+    const include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{
+        ndk_root,
+        "toolchains",
+        "llvm",
+        "prebuilt",
+        toolchainHostTag(),
+        "sysroot",
+        "usr",
+        "include",
+    }) catch unreachable;
     const system_include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable;
 
     // exe.addIncludePath(include_dir);

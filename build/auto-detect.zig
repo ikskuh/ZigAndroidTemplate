@@ -461,7 +461,7 @@ fn findProblemWithAndroidNdk(b: *Builder, versions: Sdk.ToolchainVersions, path:
         "toolchains",
         "llvm",
         "prebuilt",
-        "linux-x86_64", //<host-tag>
+        Sdk.toolchainHostTag(),
         "sysroot",
         "usr",
         "include",
