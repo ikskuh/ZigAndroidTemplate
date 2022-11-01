@@ -30,9 +30,9 @@ jobs:
       
       - name: Install Android SDK
         run: |
-          sdkmanager --install "platforms;android-28"
-          sdkmanager --install "build-tools;28.0.3"
-          sdkmanager --install "ndk;21.1.6352462"
+          sdkmanager --install "platforms;android-21"
+          sdkmanager --install "build-tools;33.0.0"
+          sdkmanager --install "ndk;25.1.8937393"
 
       - name: Build the project
         run: |
