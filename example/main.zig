@@ -2,7 +2,7 @@ const std = @import("std");
 
 const android = @import("android");
 
-const audio = @import("audio.zig");
+const audio = android.audio;
 pub const panic = android.panic;
 pub const log = android.log;
 
@@ -372,26 +372,16 @@ pub const AndroidApp = struct {
         // Audio
         self.simple_synth = SimpleSynth.init();
 
-        // audio.OpenSL.init() catch |e| {
-        //     app_log.err("OpenSL init error: {s}", .{@errorName(e)});
-        // };
-        // defer audio.OpenSL.deinit();
+        try audio.init();
 
-        // var output_stream = try audio.OpenSL.getOutputStream(self.allocator, .{
-        //     .sample_format = .Int16,
-        //     .callback = SimpleSynth.audioCallback,
-        //     .user_data = &self.simple_synth,
-        // });
-
-        var output_stream = try audio.AAudio.getOutputStream(self.allocator, .{
+        var output_stream = try audio.getOutputStream(self.allocator, .{
             .sample_format = .Int16,
             .callback = SimpleSynth.audioCallback,
             .user_data = &self.simple_synth,
         });
         defer {
-            output_stream.stop() catch {};
+            output_stream.stop();
             output_stream.deinit();
-            // output_stream.deinit(self.allocator);
         }
 
         try output_stream.start();
