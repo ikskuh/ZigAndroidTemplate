@@ -370,27 +370,28 @@ pub const AndroidApp = struct {
         }
 
         // Audio
-        // self.audio_engine = audio.AudioEngine{};
-        // if (!self.audio_engine.start()) {
-        //     app_log.info("Couldn't start audio engine", .{});
-        // }
-        // defer _ = self.audio_engine.stop();
-
-        audio.OpenSL.init() catch |e| {
-            app_log.err("OpenSL init error: {s}", .{@errorName(e)});
-        };
-        defer audio.OpenSL.deinit();
-
         self.simple_synth = SimpleSynth.init();
 
-        var output_stream = try audio.OpenSL.getOutputStream(self.allocator, .{
+        // audio.OpenSL.init() catch |e| {
+        //     app_log.err("OpenSL init error: {s}", .{@errorName(e)});
+        // };
+        // defer audio.OpenSL.deinit();
+
+        // var output_stream = try audio.OpenSL.getOutputStream(self.allocator, .{
+        //     .sample_format = .Int16,
+        //     .callback = SimpleSynth.audioCallback,
+        //     .user_data = &self.simple_synth,
+        // });
+
+        var output_stream = try audio.AAudio.getOutputStream(self.allocator, .{
             .sample_format = .Int16,
             .callback = SimpleSynth.audioCallback,
             .user_data = &self.simple_synth,
         });
         defer {
             output_stream.stop() catch {};
-            output_stream.deinit(self.allocator);
+            output_stream.deinit();
+            // output_stream.deinit(self.allocator);
         }
 
         try output_stream.start();

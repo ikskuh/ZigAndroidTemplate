@@ -32,7 +32,7 @@
           zig = zig.packages.${system}.master;
           android-sdk = android.sdk.${system} (sdkPkgs: with sdkPkgs; [
             # Useful packages for building and testing.
-            build-tools-30-0-2
+            build-tools-33-0-0
             cmdline-tools-latest
             emulator
             platform-tools
