@@ -813,7 +813,7 @@ pub fn compileAppLibrary(
     exe.install();
 
     // TODO: Remove when https://github.com/ziglang/zig/issues/7935 is resolved:
-    if (exe.target.getCpuArch() == .@"i386") {
+    if (exe.target.getCpuArch() == .x86) {
         exe.link_z_notext = true;
     }
 
@@ -986,7 +986,7 @@ const zig_targets = struct {
     };
 
     const x86 = std.zig.CrossTarget{
-        .cpu_arch = .i386,
+        .cpu_arch = .x86,
         .os_tag = android_os,
         .abi = android_abi,
         .cpu_model = .baseline,
