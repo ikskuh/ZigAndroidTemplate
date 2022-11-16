@@ -450,7 +450,7 @@ pub fn createApp(
         if (app_config.fullscreen) {
             writer.writeAll(
                 \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon" >
-                \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
+                \\        <activity android:exported="true" android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
                 \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
                 \\            <intent-filter>
                 \\                <action android:name="android.intent.action.MAIN"/>
@@ -464,7 +464,7 @@ pub fn createApp(
         } else {
             writer.writeAll(
                 \\    <application android:debuggable="true" android:hasCode="false" android:label="@string/app_name" tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon">
-                \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
+                \\        <activity android:exported="true" android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
                 \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
                 \\            <intent-filter>
                 \\                <action android:name="android.intent.action.MAIN"/>
