@@ -45,6 +45,13 @@ folders: UserConfig,
 
 versions: ToolchainVersions,
 
+launch_using: ADBLaunchMethod = .monkey,
+
+pub const ADBLaunchMethod = enum {
+    monkey,
+    am,
+};
+
 /// Initializes the android SDK.
 /// It requires some input on which versions of the tool chains should be used
 pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions) *Sdk {
@@ -922,14 +929,25 @@ pub fn installApp(sdk: Sdk, apk_file: std.build.FileSource) *Step {
 }
 
 pub fn startApp(sdk: Sdk, package_name: []const u8) *Step {
-    const step = sdk.b.addSystemCommand(&[_][]const u8{
-        sdk.system_tools.adb,
-        "shell",
-        "am",
-        "start",
-        "-n",
-        sdk.b.fmt("{s}/android.app.NativeActivity", .{package_name}),
-    });
+    const command = switch (sdk.launch_using) {
+        .am => &.{
+            sdk.system_tools.adb,
+            "shell",
+            "am",
+            "start",
+            "-n",
+            sdk.b.fmt("{s}/android.app.NativeActivity", .{package_name}),
+        },
+        .monkey => &.{
+            sdk.system_tools.adb,
+            "shell",
+            "monkey",
+            "-p",
+            package_name,
+            "1",
+        }, 
+    };
+    const step = sdk.b.addSystemCommand(command);
     return &step.step;
 }
 
