@@ -944,38 +944,32 @@ pub const KeyConfig = struct {
 /// A build step that initializes a new key store from the given configuration.
 /// `android_config.key_store` must be non-`null` as it is used to initialize the key store.
 pub fn initKeystore(sdk: Sdk, key_store: KeyStore, key_config: KeyConfig) *Step {
-    if (std.fs.cwd().statFile(key_store.file)) |_| {
+    if (auto_detect.fileExists(key_store.file)) {
+        std.log.warn("keystore already exists: {s}", .{key_store.file});
         return sdk.b.step("init_keystore_noop", "Do nothing, since key exists");
-    } else |err| {
-        switch(err) {
-            error.FileNotFound => {
-                const step = sdk.b.addSystemCommand(&[_][]const u8{
-                    sdk.system_tools.keytool,
-                    "-genkey",
-                    "-v",
-                    "-keystore",
-                    key_store.file,
-                    "-alias",
-                    key_store.alias,
-                    "-keyalg",
-                    @tagName(key_config.key_algorithm),
-                    "-keysize",
-                    sdk.b.fmt("{d}", .{key_config.key_size}),
-                    "-validity",
-                    sdk.b.fmt("{d}", .{key_config.validity}),
-                    "-storepass",
-                    key_store.password,
-                    "-keypass",
-                    key_store.password,
-                    "-dname",
-                    key_config.distinguished_name,
-                });
-                return &step.step;
-            },
-            else => {
-                @panic(@errorName(err));
-            },
-        }
+    } else {
+        const step = sdk.b.addSystemCommand(&[_][]const u8{
+            sdk.system_tools.keytool,
+            "-genkey",
+            "-v",
+            "-keystore",
+            key_store.file,
+            "-alias",
+            key_store.alias,
+            "-keyalg",
+            @tagName(key_config.key_algorithm),
+            "-keysize",
+            sdk.b.fmt("{d}", .{key_config.key_size}),
+            "-validity",
+            sdk.b.fmt("{d}", .{key_config.validity}),
+            "-storepass",
+            key_store.password,
+            "-keypass",
+            key_store.password,
+            "-dname",
+            key_config.distinguished_name,
+        });
+        return &step.step;
     }
 }
 
