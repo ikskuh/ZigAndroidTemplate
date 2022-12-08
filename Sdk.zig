@@ -55,7 +55,13 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
 
         const zipalign = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "zipalign" ++ exe }) catch unreachable;
         const aapt = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "aapt" ++ exe }) catch unreachable;
-        const adb = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "platform-tools", "adb" ++ exe }) catch unreachable;
+        const adb = blk1: {
+            const adb_sdk = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "platform-tools", "adb" ++ exe }) catch unreachable;
+            if (!auto_detect.fileExists(adb_sdk)) {
+                break :blk1 auto_detect.findProgramPath(b.allocator, "adb") orelse @panic("No adb found");
+            }
+            break :blk1 adb_sdk;
+        };
         const apksigner = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "apksigner" ++ exe }) catch unreachable;
         const keytool = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.java_home, "bin", "keytool" ++ exe }) catch unreachable;
 
@@ -96,7 +102,7 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
 }
 
 pub const ToolchainVersions = struct {
-    build_tools_version: []const u8 = "33.0.0",
+    build_tools_version: []const u8 = "33.0.1",
     ndk_version: []const u8 = "25.1.8937393",
 };
 
@@ -938,28 +944,39 @@ pub const KeyConfig = struct {
 /// A build step that initializes a new key store from the given configuration.
 /// `android_config.key_store` must be non-`null` as it is used to initialize the key store.
 pub fn initKeystore(sdk: Sdk, key_store: KeyStore, key_config: KeyConfig) *Step {
-    const step = sdk.b.addSystemCommand(&[_][]const u8{
-        sdk.system_tools.keytool,
-        "-genkey",
-        "-v",
-        "-keystore",
-        key_store.file,
-        "-alias",
-        key_store.alias,
-        "-keyalg",
-        @tagName(key_config.key_algorithm),
-        "-keysize",
-        sdk.b.fmt("{d}", .{key_config.key_size}),
-        "-validity",
-        sdk.b.fmt("{d}", .{key_config.validity}),
-        "-storepass",
-        key_store.password,
-        "-keypass",
-        key_store.password,
-        "-dname",
-        key_config.distinguished_name,
-    });
-    return &step.step;
+    if (std.fs.cwd().statFile(key_store.file)) |_| {
+        return sdk.b.step("init_keystore_noop", "Do nothing, since key exists");
+    } else |err| {
+        switch(err) {
+            error.FileNotFound => {
+                const step = sdk.b.addSystemCommand(&[_][]const u8{
+                    sdk.system_tools.keytool,
+                    "-genkey",
+                    "-v",
+                    "-keystore",
+                    key_store.file,
+                    "-alias",
+                    key_store.alias,
+                    "-keyalg",
+                    @tagName(key_config.key_algorithm),
+                    "-keysize",
+                    sdk.b.fmt("{d}", .{key_config.key_size}),
+                    "-validity",
+                    sdk.b.fmt("{d}", .{key_config.validity}),
+                    "-storepass",
+                    key_store.password,
+                    "-keypass",
+                    key_store.password,
+                    "-dname",
+                    key_config.distinguished_name,
+                });
+                return &step.step;
+            },
+            else => {
+                @panic(@errorName(err));
+            },
+        }
+    }
 }
 
 const Builder = std.build.Builder;
