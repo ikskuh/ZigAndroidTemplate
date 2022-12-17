@@ -32,7 +32,7 @@ pub const JNI = struct {
         return @typeInfo(@typeInfo(std.meta.fieldInfo(android.JNINativeInterface, function).field_type).Pointer.child).Fn.return_type.?;
     }
 
-    fn invokeJni(self: *Self, comptime function: @TypeOf(.literal), args: anytype) JniReturnType(function) {
+    pub inline fn invokeJni(self: Self, comptime function: @TypeOf(.literal), args: anytype) JniReturnType(function) {
         return @call(
             .{},
             @field(self.env.*, @tagName(function)),
@@ -40,7 +40,7 @@ pub const JNI = struct {
         );
     }
 
-    fn findClass(self: *Self, class: [:0]const u8) android.jclass {
+    pub fn findClass(self: Self, class: [:0]const u8) android.jclass {
         return self.invokeJni(.FindClass, .{class.ptr});
     }
 
