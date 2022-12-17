@@ -44,6 +44,10 @@ pub const JNI = struct {
         return self.invokeJni(.FindClass, .{class.ptr});
     }
 
+    pub fn newString(self: Self, string: [*:0]const u8) android.jstring {
+        return self.invokeJni(.NewStringUTF, .{ string });
+    }
+
     pub fn AndroidGetUnicodeChar(self: *Self, keyCode: c_int, metaState: c_int) u21 {
         // https://stackoverflow.com/questions/21124051/receive-complete-android-unicode-input-in-c-c/43871301
         const eventType = android.AKEY_EVENT_ACTION_DOWN;
