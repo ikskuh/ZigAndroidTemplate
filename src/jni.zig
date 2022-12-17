@@ -12,7 +12,17 @@ pub const JNI = struct {
     pub fn init(activity: *android.ANativeActivity) Self {
         var env: *android.JNIEnv = undefined;
         _ = activity.vm.*.AttachCurrentThread(activity.vm, &env, null);
+        return fromJniEnv(activity, env);
+    }
 
+    /// Get the JNIEnv associated with the current thread.
+    pub fn get(activity: *android.ANativeActivity) Self {
+        var env: *android.JNIEnv = undefined;
+        _ = activity.vm.*.GetEnv(activity.vm, @ptrCast(*?*anyopaque, &env), android.JNI_VERSION_1_6);
+        return fromJniEnv(activity, env);
+    }
+
+    fn fromJniEnv(activity: *android.ANativeActivity, env: *android.JNIEnv) Self {
         var activityClass = env.*.FindClass(env, "android/app/NativeActivity");
 
         return Self{
