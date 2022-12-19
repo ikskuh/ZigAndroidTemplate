@@ -929,7 +929,7 @@ pub fn installApp(sdk: Sdk, apk_file: std.build.FileSource) *Step {
 }
 
 pub fn startApp(sdk: Sdk, package_name: []const u8) *Step {
-    const command = switch (sdk.launch_using) {
+    const command: []const []const u8 = switch (sdk.launch_using) {
         .am => &.{
             sdk.system_tools.adb,
             "shell",
@@ -945,7 +945,7 @@ pub fn startApp(sdk: Sdk, package_name: []const u8) *Step {
             "-p",
             package_name,
             "1",
-        }, 
+        },
     };
     const step = sdk.b.addSystemCommand(command);
     return &step.step;
@@ -1029,9 +1029,7 @@ const zig_targets = struct {
     };
 };
 
-const app_libs = [_][]const u8{
-    "GLESv2", "EGL", "android", "log", "aaudio"
-};
+const app_libs = [_][]const u8{ "GLESv2", "EGL", "android", "log", "aaudio" };
 
 const BuildOptionStep = struct {
     const Self = @This();
