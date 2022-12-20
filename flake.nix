@@ -32,17 +32,11 @@
           zig = zig.packages.${system}.master;
           android-sdk = android.sdk.${system} (sdkPkgs: with sdkPkgs; [
             # Useful packages for building and testing.
-            build-tools-33-0-0
+            build-tools-33-0-1
             cmdline-tools-latest
-            emulator
             platform-tools
-            platforms-android-30
+            platforms-android-21
             ndk-25-1-8937393
-
-            # Other useful packages for a development environment.
-            # sources-android-30
-            # system-images-android-30-google-apis-x86
-            # system-images-android-30-google-apis-playstore-x86
           ]);
         };
 
