@@ -66,9 +66,18 @@ pub fn build(b: *std.build.Builder) !void {
         .libraries = libraries.items,
     };
 
+    // Replace by your app's main file.
+    // Here this is some code to choose the example to run
+    const ExampleType = enum { egl, textview };
+    const example = b.option(ExampleType, "example", "Which example to run") orelse .egl;
+    const src = switch (example) {
+        .egl => "example/main.zig",
+        .textview => "examples/textview/main.zig",
+    };
+
     const app = sdk.createApp(
         "app-template.apk",
-        "example/main.zig",
+        src,
         config,
         mode,
         .{
