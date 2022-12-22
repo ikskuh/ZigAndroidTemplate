@@ -9,6 +9,7 @@ const build_options = @import("build_options");
 pub const egl = @import("egl.zig");
 pub const JNI = @import("jni.zig").JNI;
 pub const audio = @import("audio.zig");
+pub const NativeInvocationHandler = @import("native-invocation-handler.zig");
 
 const app_log = std.log.scoped(.app_glue);
 

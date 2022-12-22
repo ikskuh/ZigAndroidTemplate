@@ -546,6 +546,8 @@ pub fn createApp(
         sdk.b.pathFromRoot(unaligned_apk_file),
         "-I", // add an existing package to base include set
         root_jar,
+        "-I",
+        "classes.dex",
     });
 
     make_unsigned_apk.addArg("-M"); // specify full path to AndroidManifest.xml to include in zip
@@ -575,6 +577,10 @@ pub fn createApp(
     build_options.add(bool, "enable_opensl", app_config.opensl);
 
     const align_step = sdk.alignApk(unaligned_apk_file, apk_file);
+
+    const copy_dex_to_zip = CopyToZipStep.create(sdk, unaligned_apk_file, null, std.build.FileSource.relative("classes.dex"));
+    copy_dex_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
+    align_step.dependOn(&copy_dex_to_zip.step);
 
     const sign_step = sdk.signApk(apk_file, key_store);
     sign_step.dependOn(align_step);
@@ -686,16 +692,18 @@ const CreateResourceDirectory = struct {
 const CopyToZipStep = struct {
     step: Step,
     sdk: *Sdk,
-    target_dir: []const u8,
+    target_dir: ?[]const u8,
     input_file: std.build.FileSource,
     apk_file: []const u8,
 
-    fn create(sdk: *Sdk, apk_file: []const u8, target_dir: []const u8, input_file: std.build.FileSource) *CopyToZipStep {
-        std.debug.assert(target_dir[target_dir.len - 1] == '/');
+    fn create(sdk: *Sdk, apk_file: []const u8, target_dir_opt: ?[]const u8, input_file: std.build.FileSource) *CopyToZipStep {
+        if (target_dir_opt) |target_dir| {
+            std.debug.assert(target_dir[target_dir.len - 1] == '/');
+        }
         const self = sdk.b.allocator.create(CopyToZipStep) catch unreachable;
         self.* = CopyToZipStep{
             .step = Step.init(.custom, "copy to zip", sdk.b.allocator, make),
-            .target_dir = target_dir,
+            .target_dir = target_dir_opt,
             .input_file = input_file,
             .sdk = sdk,
             .apk_file = sdk.b.pathFromRoot(apk_file),
@@ -712,10 +720,10 @@ const CopyToZipStep = struct {
 
         const output_path = self.input_file.getPath(self.sdk.b);
 
-        var zip_name = std.mem.concat(self.sdk.b.allocator, u8, &[_][]const u8{
-            self.target_dir,
+        var zip_name = if (self.target_dir) |target_dir| std.mem.concat(self.sdk.b.allocator, u8, &[_][]const u8{
+            target_dir,
             std.fs.path.basename(output_path),
-        }) catch unreachable;
+        }) catch unreachable else std.fs.path.basename(output_path);
 
         const args = [_][]const u8{
             self.sdk.host_tools.zip_add.getOutputSource().getPath(self.sdk.b),
