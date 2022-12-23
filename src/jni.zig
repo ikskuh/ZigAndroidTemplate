@@ -2,19 +2,14 @@ const std = @import("std");
 const log = std.log.scoped(.jni);
 const android = @import("android-support.zig");
 
-pub const JNI = struct {
-    const Self = @This();
-
-    env: *android.JNIEnv,
-
-    pub fn init(env: *android.JNIEnv) Self {
-        return Self{
-            .env = env,
-        };
-    }
-
-    pub fn findClass(self: Self, class: [:0]const u8) android.jclass {
-        return self.invokeJni(.FindClass, .{class.ptr});
+/// Wraps JNIEnv to provide a better Zig API.
+/// *android.JNIEnv can be directly cast to `*JNI`. For example:
+/// ```
+/// const jni = @ptrCast(*JNI, jni_env);
+/// ```
+pub const JNI = opaque {
+    pub fn findClass(jni: *JNI, class: [:0]const u8) android.jclass {
+        return jni.invokeJni(.FindClass, .{class.ptr});
     }
 
     fn JniReturnType(comptime function: @TypeOf(.literal)) type {
@@ -22,49 +17,50 @@ pub const JNI = struct {
         return @typeInfo(@typeInfo(std.meta.fieldInfo(android.JNINativeInterface, function).type).Pointer.child).Fn.return_type.?;
     }
 
-    pub inline fn invokeJni(self: Self, comptime function: @TypeOf(.literal), args: anytype) JniReturnType(function) {
+    pub inline fn invokeJni(jni: *JNI, comptime function: @TypeOf(.literal), args: anytype) JniReturnType(function) {
+        const env = @ptrCast(*android.JNIEnv, @alignCast(@alignOf(*android.JNIEnv), jni));
         return @call(
             .auto,
-            @field(self.env.*, @tagName(function)),
-            .{self.env} ++ args,
+            @field(env.*, @tagName(function)),
+            .{env} ++ args,
         );
     }
 
-    pub fn getClassNameString(self: Self, object: android.jobject) String {
-        const object_class = self.invokeJni(.GetObjectClass, .{object});
-        const ClassClass = self.findClass("java/lang/Class");
-        const getName = self.invokeJni(.GetMethodID, .{ ClassClass, "getName", "()Ljava/lang/String;" });
-        const name = self.invokeJni(.CallObjectMethod, .{ object_class, getName });
-        return String.init(self, name);
+    pub fn getClassNameString(jni: *JNI, object: android.jobject) String {
+        const object_class = jni.invokeJni(.GetObjectClass, .{object});
+        const ClassClass = jni.findClass("java/lang/Class");
+        const getName = jni.invokeJni(.GetMethodID, .{ ClassClass, "getName", "()Ljava/lang/String;" });
+        const name = jni.invokeJni(.CallObjectMethod, .{ object_class, getName });
+        return String.init(jni, name);
     }
 
-    pub fn printToString(self: Self, object: android.jobject) void {
-        const string = String.init(self, self.callObjectMethod(object, "toString", "()Ljava/lang/String;", .{}));
-        defer string.deinit(self);
+    pub fn printToString(jni: *JNI, object: android.jobject) void {
+        const string = String.init(jni, jni.callObjectMethod(object, "toString", "()Ljava/lang/String;", .{}));
+        defer string.deinit(jni);
         std.log.info("{any}: {}", .{ object, std.unicode.fmtUtf16le(string.slice) });
     }
 
-    pub fn newString(self: Self, string: [*:0]const u8) android.jstring {
-        return self.invokeJni(.NewStringUTF, .{string});
+    pub fn newString(jni: *JNI, string: [*:0]const u8) android.jstring {
+        return jni.invokeJni(.NewStringUTF, .{string});
     }
 
-    pub fn getLongField(self: Self, object: android.jobject, field_id: android.jfieldID) android.jlong {
-        return self.invokeJni(.GetLongField, .{ object, field_id });
+    pub fn getLongField(jni: *JNI, object: android.jobject, field_id: android.jfieldID) android.jlong {
+        return jni.invokeJni(.GetLongField, .{ object, field_id });
     }
 
-    pub fn callObjectMethod(self: Self, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) JniReturnType(.CallObjectMethod) {
-        const object_class = self.invokeJni(.GetObjectClass, .{object});
-        const method_id = self.invokeJni(.GetMethodID, .{ object_class, name, signature });
-        return self.invokeJni(.CallObjectMethod, .{ object, method_id } ++ args);
+    pub fn callObjectMethod(jni: *JNI, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) JniReturnType(.CallObjectMethod) {
+        const object_class = jni.invokeJni(.GetObjectClass, .{object});
+        const method_id = jni.invokeJni(.GetMethodID, .{ object_class, name, signature });
+        return jni.invokeJni(.CallObjectMethod, .{ object, method_id } ++ args);
     }
 
     pub const String = struct {
         jstring: android.jstring,
         slice: []const u16,
 
-        pub fn init(self: Self, string: android.jstring) String {
-            const len = self.invokeJni(.GetStringLength, .{string});
-            const ptr = self.invokeJni(.GetStringChars, .{ string, null });
+        pub fn init(jni: *JNI, string: android.jstring) String {
+            const len = jni.invokeJni(.GetStringLength, .{string});
+            const ptr = jni.invokeJni(.GetStringChars, .{ string, null });
             const slice = ptr[0..@intCast(usize, len)];
             return String{
                 .jstring = string,
@@ -72,8 +68,8 @@ pub const JNI = struct {
             };
         }
 
-        pub fn deinit(string: String, self: Self) void {
-            self.invokeJni(.ReleaseStringChars, .{ string.jstring, string.slice.ptr });
+        pub fn deinit(string: String, jni: *JNI) void {
+            jni.invokeJni(.ReleaseStringChars, .{ string.jstring, string.slice.ptr });
         }
     };
 };
@@ -82,7 +78,7 @@ pub const NativeActivity = struct {
     const Self = @This();
 
     activity: *android.ANativeActivity,
-    jni: JNI,
+    jni: *JNI,
     activity_class: android.jclass,
 
     pub fn init(activity: *android.ANativeActivity) Self {
@@ -103,7 +99,7 @@ pub const NativeActivity = struct {
 
         return Self{
             .activity = activity,
-            .jni = JNI.init(env),
+            .jni = @ptrCast(*JNI, env),
             .activity_class = activityClass,
         };
     }
@@ -278,13 +274,13 @@ pub const NativeActivity = struct {
     pub fn getFilesDir(self: *Self, allocator: std.mem.Allocator) ![:0]const u8 {
         const getFilesDirMethod = self.jni.invokeJni(.GetMethodID, .{ self.activity_class, "getFilesDir", "()Ljava/io/File;" });
 
-        const files_dir = self.env.*.CallObjectMethod(self.env, self.activity.clazz, getFilesDirMethod);
+        const files_dir = self.jni.*.CallObjectMethod(self.jni, self.activity.clazz, getFilesDirMethod);
 
         const fileClass = self.jni.findClass("java/io/File");
 
         const getPathMethod = self.jni.invokeJni(.GetMethodID, .{ fileClass, "getPath", "()Ljava/lang/String;" });
 
-        const path_string = self.env.*.CallObjectMethod(self.env, files_dir, getPathMethod);
+        const path_string = self.jni.*.CallObjectMethod(self.jni, files_dir, getPathMethod);
 
         const utf8_or_null = self.jni.invokeJni(.GetStringUTFChars, .{ path_string, null });
 

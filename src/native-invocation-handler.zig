@@ -5,7 +5,7 @@ const Self = @This();
 class: android.jobject,
 initFn: android.jmethodID,
 
-pub fn init(jni: android.jni.JNI, class: android.jobject) Self {
+pub fn init(jni: *android.jni.JNI, class: android.jobject) Self {
     const methods = [_]android.JNINativeMethod{
         .{
             .name = "invoke0",
@@ -20,7 +20,7 @@ pub fn init(jni: android.jni.JNI, class: android.jobject) Self {
     };
 }
 
-pub fn createAlloc(self: Self, jni: android.jni.JNI, alloc: std.mem.Allocator, pointer: ?*anyopaque, function: InvokeFn) !android.jobject {
+pub fn createAlloc(self: Self, jni: *android.jni.JNI, alloc: std.mem.Allocator, pointer: ?*anyopaque, function: InvokeFn) !android.jobject {
     // Create a InvocationHandler struct
     var handler = try alloc.create(InvocationHandler);
     errdefer alloc.destroy(handler);
@@ -42,7 +42,7 @@ pub fn createAlloc(self: Self, jni: android.jni.JNI, alloc: std.mem.Allocator, p
 }
 
 /// Function signature for invoke functions
-pub const InvokeFn = *const fn (?*anyopaque, android.jni.JNI, android.jobject, android.jobjectArray) android.jobject;
+pub const InvokeFn = *const fn (?*anyopaque, *android.jni.JNI, android.jobject, android.jobjectArray) android.jobject;
 
 /// InvocationHandler Technique found here https://groups.google.com/g/android-ndk/c/SRgy93Un8vM
 const InvocationHandler = struct {
@@ -50,9 +50,8 @@ const InvocationHandler = struct {
     function: InvokeFn,
 
     /// Called by java class NativeInvocationHandler
-    pub fn invoke0(jni_env: *android.JNIEnv, this: android.jobject, proxy: android.jobject, method: android.jobject, args: android.jobjectArray) android.jobject {
+    pub fn invoke0(jni: *android.jni.JNI, this: android.jobject, proxy: android.jobject, method: android.jobject, args: android.jobjectArray) android.jobject {
         _ = proxy; // This is the proxy object. Calling anything on it will cause invoke to be called. If this isn't explicitly handled, it will recurse infinitely
-        const jni = android.jni.JNI.init(jni_env);
         const Class = jni.invokeJni(.GetObjectClass, .{this});
         const ptrField = jni.invokeJni(.GetFieldID, .{ Class, "ptr", "J" });
         const jptr = jni.getLongField(this, ptrField);
