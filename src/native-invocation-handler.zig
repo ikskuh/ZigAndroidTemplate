@@ -6,11 +6,6 @@ class: android.jobject,
 initFn: android.jmethodID,
 
 pub fn init(jni: android.jni.JNI, class: android.jobject) Self {
-    // const native_invocation_handler_buffer = @embedFile("NativeInvocationHandler.dex");
-    // TODO: define class is not implemented on android
-    // const NativeInvocationHandler = jni.invokeJni(.DefineClass, .{ "NativeInvocationHandler", class_loader, @ptrCast([*]const i8, &native_invocation_handler_buffer), native_invocation_handler_buffer.len });
-    // const NativeInvocationHandler = jni.findClass("NativeInvocationHandler");
-    // const NativeInvocationHandler = jni.findClass("net/random_projects/zig_android_template/NativeInvocationHandler");
     const methods = [_]android.JNINativeMethod{
         .{
             .name = "invoke0",
