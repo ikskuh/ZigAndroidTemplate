@@ -6,7 +6,8 @@ pub const panic = android.panic;
 pub const log = android.log;
 
 const EGLContext = android.egl.EGLContext;
-const JNI = android.jni.JNI;
+const JNI = android.JNI;
+const NativeActivity = android.NativeActivity;
 const c = android.egl.c;
 const NativeInvocationHandler = android.NativeInvocationHandler;
 
@@ -20,28 +21,28 @@ const ButtonData = struct {
     count: usize = 0,
 };
 
-pub fn timerInvoke(data: ?*anyopaque, jni: *android.jni.JNI, method: android.jobject, args: android.jobjectArray) android.jobject {
+pub fn timerInvoke(data: ?*anyopaque, jni: *android.JNI, method: android.jobject, args: android.jobjectArray) !android.jobject {
     var btn_data = @ptrCast(*ButtonData, @alignCast(@alignOf(*ButtonData), data));
     btn_data.count += 1;
     std.log.info("Running invoke!", .{});
-    const method_name = android.jni.JNI.String.init(jni, jni.callObjectMethod(method, "getName", "()Ljava/lang/String;", .{}));
+    const method_name = try android.JNI.String.init(jni, try jni.callObjectMethod(method, "getName", "()Ljava/lang/String;", .{}));
     defer method_name.deinit(jni);
     std.log.info("Method {}", .{std.unicode.fmtUtf16le(method_name.slice)});
 
-    const length = jni.invokeJni(.GetArrayLength, .{args});
+    const length = try jni.invokeJni(.GetArrayLength, .{args});
     var i: i32 = 0;
     while (i < length) : (i += 1) {
-        const object = jni.invokeJni(.GetObjectArrayElement, .{ args, i });
-        const string = android.jni.JNI.String.init(jni, jni.callObjectMethod(object, "toString", "()Ljava/lang/String;", .{}));
+        const object = try jni.invokeJni(.GetObjectArrayElement, .{ args, i });
+        const string = try android.JNI.String.init(jni, try jni.callObjectMethod(object, "toString", "()Ljava/lang/String;", .{}));
         defer string.deinit(jni);
         std.log.info("Arg {}: {}", .{ i, std.unicode.fmtUtf16le(string.slice) });
 
         if (i == 0) {
-            const Button = jni.findClass("android/widget/Button");
-            const setText = jni.invokeJni(.GetMethodID, .{ Button, "setText", "(Ljava/lang/CharSequence;)V" });
+            const Button = try jni.findClass("android/widget/Button");
+            const setText = try jni.invokeJni(.GetMethodID, .{ Button, "setText", "(Ljava/lang/CharSequence;)V" });
             var buf: [256:0]u8 = undefined;
             const str = std.fmt.bufPrintZ(&buf, "Pressed {} times!", .{btn_data.count}) catch "formatting bug";
-            jni.invokeJni(.CallVoidMethod, .{ object, setText, jni.newString(str) });
+            try jni.invokeJni(.CallVoidMethod, .{ object, setText, try jni.newString(str) });
         }
     }
 
@@ -55,9 +56,9 @@ pub const AndroidApp = struct {
     running: bool = true,
 
     // The JNIEnv of the UI thread
-    uiJni: android.jni.NativeActivity = undefined,
+    uiJni: android.NativeActivity = undefined,
     // The JNIEnv of the app thread
-    mainJni: android.jni.NativeActivity = undefined,
+    mainJni: android.NativeActivity = undefined,
 
     invocation_handler: NativeInvocationHandler = undefined,
 
@@ -88,28 +89,28 @@ pub const AndroidApp = struct {
         self.pipe = try std.os.pipe();
         android.ALooper_acquire(self.uiThreadLooper);
 
-        var native_activity = android.jni.NativeActivity.init(self.activity);
+        var native_activity = android.NativeActivity.init(self.activity);
         var jni = native_activity.jni;
         self.uiJni = native_activity;
 
         // Get the window object attached to our activity
-        const activityClass = jni.findClass("android/app/NativeActivity");
-        const getWindow = jni.invokeJni(.GetMethodID, .{ activityClass, "getWindow", "()Landroid/view/Window;" });
-        const activityWindow = jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getWindow });
-        const WindowClass = jni.findClass("android/view/Window");
+        const activityClass = try jni.findClass("android/app/NativeActivity");
+        const getWindow = try jni.invokeJni(.GetMethodID, .{ activityClass, "getWindow", "()Landroid/view/Window;" });
+        const activityWindow = try jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getWindow });
+        const WindowClass = try jni.findClass("android/view/Window");
 
         // This disables the surface handler set by default by android.view.NativeActivity
         // This way we let the content view do the drawing instead of us.
-        const takeSurface = jni.invokeJni(.GetMethodID, .{ WindowClass, "takeSurface", "(Landroid/view/SurfaceHolder$Callback2;)V" });
-        jni.invokeJni(.CallVoidMethod, .{
+        const takeSurface = try jni.invokeJni(.GetMethodID, .{ WindowClass, "takeSurface", "(Landroid/view/SurfaceHolder$Callback2;)V" });
+        try jni.invokeJni(.CallVoidMethod, .{
             activityWindow,
             takeSurface,
             @as(android.jobject, null),
         });
 
         // Do the same but with the input queue. This allows the content view to handle input.
-        const takeInputQueue = jni.invokeJni(.GetMethodID, .{ WindowClass, "takeInputQueue", "(Landroid/view/InputQueue$Callback;)V" });
-        jni.invokeJni(.CallVoidMethod, .{
+        const takeInputQueue = try jni.invokeJni(.GetMethodID, .{ WindowClass, "takeInputQueue", "(Landroid/view/InputQueue$Callback;)V" });
+        try jni.invokeJni(.CallVoidMethod, .{
             activityWindow,
             takeInputQueue,
             @as(android.jobject, null),
@@ -178,32 +179,38 @@ pub const AndroidApp = struct {
     }
 
     fn setAppContentView(self: *AndroidApp) void {
-        const native_activity = android.jni.NativeActivity.get(self.activity);
+        setAppContentViewImpl(self) catch |e| {
+            app_log.err("Encountered error while setting app content view: {s}", .{@errorName(e)});
+        };
+    }
+
+    fn setAppContentViewImpl(self: *AndroidApp) !void {
+        const native_activity = android.NativeActivity.get(self.activity);
         const jni = native_activity.jni;
 
         // We create a new Button..
         std.log.warn("Creating android.widget.Button", .{});
-        const Button = jni.findClass("android/widget/Button");
+        const Button = try jni.findClass("android/widget/Button");
         // methods
-        const buttonInit = jni.invokeJni(.GetMethodID, .{ Button, "<init>", "(Landroid/content/Context;)V" });
-        const setOnClickListener = jni.invokeJni(.GetMethodID, .{ Button, "setOnClickListener", "(Landroid/view/View$OnClickListener;)V" });
-        const setText = jni.invokeJni(.GetMethodID, .{ Button, "setText", "(Ljava/lang/CharSequence;)V" });
+        const buttonInit = try jni.invokeJni(.GetMethodID, .{ Button, "<init>", "(Landroid/content/Context;)V" });
+        const setOnClickListener = try jni.invokeJni(.GetMethodID, .{ Button, "setOnClickListener", "(Landroid/view/View$OnClickListener;)V" });
+        const setText = try jni.invokeJni(.GetMethodID, .{ Button, "setText", "(Ljava/lang/CharSequence;)V" });
         // invocations
         // init
-        const button = jni.invokeJni(.NewObject, .{ Button, buttonInit, self.activity.clazz });
+        const button = try jni.invokeJni(.NewObject, .{ Button, buttonInit, self.activity.clazz });
 
         // .. and set its text to "Hello from Zig!"
-        jni.invokeJni(.CallVoidMethod, .{ button, setText, jni.newString("Hello from Zig!") });
+        try jni.invokeJni(.CallVoidMethod, .{ button, setText, try jni.newString("Hello from Zig!") });
         // set onclick callback
-        const listener = self.getOnClickListener(jni) catch @panic("help");
+        const listener = try self.getOnClickListener(jni);
         std.log.info("Listener {any}", .{listener});
-        jni.invokeJni(.CallVoidMethod, .{ button, setOnClickListener, listener });
+        try jni.invokeJni(.CallVoidMethod, .{ button, setOnClickListener, listener });
 
         // And then we use it as our content view!
         std.log.err("Attempt to call NativeActivity.setContentView()", .{});
-        const activityClass = jni.findClass("android/app/NativeActivity");
-        const setContentView = jni.invokeJni(.GetMethodID, .{ activityClass, "setContentView", "(Landroid/view/View;)V" });
-        jni.invokeJni(.CallVoidMethod, .{
+        const activityClass = try jni.findClass("android/app/NativeActivity");
+        const setContentView = try jni.invokeJni(.GetMethodID, .{ activityClass, "setContentView", "(Landroid/view/View;)V" });
+        try jni.invokeJni(.CallVoidMethod, .{
             self.activity.clazz,
             setContentView,
             button,
@@ -211,7 +218,7 @@ pub const AndroidApp = struct {
     }
 
     fn mainLoop(self: *AndroidApp) !void {
-        self.mainJni = android.jni.NativeActivity.init(self.activity);
+        self.mainJni = android.NativeActivity.init(self.activity);
         defer self.mainJni.deinit();
 
         try self.runOnUiThread(setAppContentView, .{self});
@@ -221,60 +228,35 @@ pub const AndroidApp = struct {
     }
 
     fn getOnClickListener(self: *AndroidApp, jni: *JNI) !android.jobject {
-        // Get class loader
-        // const activityClass = self.activity.clazz;
-        const activityClass = jni.findClass("android/app/NativeActivity");
-        std.log.info("activityclass {any}", .{activityClass});
-        const getClassLoader = jni.invokeJni(.GetMethodID, .{ activityClass, "getClassLoader", "()Ljava/lang/ClassLoader;" });
-        std.log.info("getClassLoader {*}", .{getClassLoader});
-        const cls = jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getClassLoader });
-        std.log.info("class_loader instance {any}", .{cls});
+        // Get class loader instance
+        const activityClass = try jni.findClass("android/app/NativeActivity");
+        const getClassLoader = try jni.invokeJni(.GetMethodID, .{ activityClass, "getClassLoader", "()Ljava/lang/ClassLoader;" });
+        const cls = try jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getClassLoader });
 
-        const classLoader = jni.findClass("java/lang/ClassLoader");
-
-        const invocation_handler_class = jni.findClass("NativeInvocationHandler");
-        var result = jni.invokeJni(.ExceptionCheck, .{});
-        std.log.info("invocation_handler_class {any}, {}", .{ invocation_handler_class, result });
-        if (result != 0) jni.invokeJni(.ExceptionClear, .{});
-        const invocation_handler_class_full = jni.findClass("net/random_projects/zig_android_template/NativeInvocationHandler");
-        std.log.info("invocation_handler_class_full {any}, {}", .{ invocation_handler_class_full, result });
-        result = jni.invokeJni(.ExceptionCheck, .{});
-        if (result != 0) jni.invokeJni(.ExceptionClear, .{});
-
-        const getPackages = jni.invokeJni(.GetMethodID, .{ classLoader, "getPackages", "()[Ljava/lang/Package;" });
-        const packages = jni.invokeJni(.CallObjectMethod, .{ cls, getPackages });
-        const array_length = jni.invokeJni(.GetArrayLength, .{packages});
-        std.log.info("There are {} packages", .{array_length});
-
-        const findClass = jni.invokeJni(.GetMethodID, .{ classLoader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;" });
-        const strClassName = jni.invokeJni(.NewStringUTF, .{"NativeInvocationHandler"});
-        const class = jni.invokeJni(.CallObjectMethod, .{ cls, findClass, strClassName });
-        result = jni.invokeJni(.ExceptionCheck, .{});
-        if (result != 0) {
-            std.log.info("Exception while calling loadClass", .{});
-            jni.invokeJni(.ExceptionDescribe, .{});
-        }
-        jni.invokeJni(.DeleteLocalRef, .{strClassName});
+        // Class loader class object
+        const ClassLoader = try jni.findClass("java/lang/ClassLoader");
+        const findClass = try jni.invokeJni(.GetMethodID, .{ ClassLoader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;" });
+        const strClassName = try jni.newString("NativeInvocationHandler");
+        const class = try jni.invokeJni(.CallObjectMethod, .{ cls, findClass, strClassName });
+        jni.invokeJniNoException(.DeleteLocalRef, .{strClassName});
 
         // Get invocation handler factory
-        self.invocation_handler = NativeInvocationHandler.init(jni, class);
+        self.invocation_handler = try NativeInvocationHandler.init(jni, class);
 
-        // Create a TimerTask invoker
+        // Create a NativeInvocationHandler
         const invocation_handler = try self.invocation_handler.createAlloc(jni, self.allocator, &self.btn_data, &timerInvoke);
 
-        std.log.info("Creating Interface array", .{});
-        const interface_array = jni.invokeJni(.NewObjectArray, .{
+        // Make an object array with 1 item, the android.view.View$OnClickListener interface class
+        const interface_array = try jni.invokeJni(.NewObjectArray, .{
             1,
-            jni.findClass("java/lang/Class"),
-            jni.findClass("android/view/View$OnClickListener"),
+            try jni.findClass("java/lang/Class"),
+            try jni.findClass("android/view/View$OnClickListener"),
         });
 
-        std.log.info("Creating proxy class", .{});
-        const Proxy = jni.findClass("java/lang/reflect/Proxy");
-        const newProxyInstance = jni.invokeJni(.GetStaticMethodID, .{ Proxy, "newProxyInstance", "(Ljava/lang/ClassLoader;[Ljava/lang/Class;Ljava/lang/reflect/InvocationHandler;)Ljava/lang/Object;" });
-        const proxy = jni.invokeJni(.CallStaticObjectMethod, .{ Proxy, newProxyInstance, cls, interface_array, invocation_handler });
-
-        std.log.info("newProxyInstance {any}, cls {any}, interfaceArray {any}, invocationHandler {any}", .{ cls, newProxyInstance, interface_array, invocation_handler });
+        // Create a Proxy class implementing the OnClickListener interface
+        const Proxy = try jni.findClass("java/lang/reflect/Proxy");
+        const newProxyInstance = try jni.invokeJni(.GetStaticMethodID, .{ Proxy, "newProxyInstance", "(Ljava/lang/ClassLoader;[Ljava/lang/Class;Ljava/lang/reflect/InvocationHandler;)Ljava/lang/Object;" });
+        const proxy = try jni.invokeJni(.CallStaticObjectMethod, .{ Proxy, newProxyInstance, cls, interface_array, invocation_handler });
 
         return proxy;
     }
