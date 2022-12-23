@@ -20,7 +20,7 @@ const ButtonData = struct {
     count: usize = 0,
 };
 
-pub fn timerInvoke(data: ?*anyopaque, jni: android.jni.JNI, method: android.jobject, args: android.jobjectArray) android.jobject {
+pub fn timerInvoke(data: ?*anyopaque, jni: *android.jni.JNI, method: android.jobject, args: android.jobjectArray) android.jobject {
     var btn_data = @ptrCast(*ButtonData, @alignCast(@alignOf(*ButtonData), data));
     btn_data.count += 1;
     std.log.info("Running invoke!", .{});
@@ -220,7 +220,7 @@ pub const AndroidApp = struct {
         }
     }
 
-    fn getOnClickListener(self: *AndroidApp, jni: JNI) !android.jobject {
+    fn getOnClickListener(self: *AndroidApp, jni: *JNI) !android.jobject {
         // Get class loader
         // const activityClass = self.activity.clazz;
         const activityClass = jni.findClass("android/app/NativeActivity");
