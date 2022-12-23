@@ -29,6 +29,7 @@ pub const JNI = struct {
             .{self.env} ++ args,
         );
     }
+
     pub fn getClassNameString(self: Self, object: android.jobject) String {
         const object_class = self.invokeJni(.GetObjectClass, .{object});
         const ClassClass = self.findClass("java/lang/Class");
@@ -37,12 +38,24 @@ pub const JNI = struct {
         return String.init(self, name);
     }
 
+    pub fn printToString(self: Self, object: android.jobject) void {
+        const string = String.init(self, self.callObjectMethod(object, "toString", "()Ljava/lang/String;", .{}));
+        defer string.deinit(self);
+        std.log.info("{any}: {}", .{ object, std.unicode.fmtUtf16le(string.slice) });
+    }
+
     pub fn newString(self: Self, string: [*:0]const u8) android.jstring {
         return self.invokeJni(.NewStringUTF, .{string});
     }
 
     pub fn getLongField(self: Self, object: android.jobject, field_id: android.jfieldID) android.jlong {
         return self.invokeJni(.GetLongField, .{ object, field_id });
+    }
+
+    pub fn callObjectMethod(self: Self, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) JniReturnType(.CallObjectMethod) {
+        const object_class = self.invokeJni(.GetObjectClass, .{object});
+        const method_id = self.invokeJni(.GetMethodID, .{ object_class, name, signature });
+        return self.invokeJni(.CallObjectMethod, .{ object, method_id } ++ args);
     }
 
     pub const String = struct {

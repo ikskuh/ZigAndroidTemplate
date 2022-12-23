@@ -17,10 +17,17 @@ comptime {
 }
 
 pub fn timerInvoke(_: ?*anyopaque, jni: android.jni.JNI, method: android.jobject, args: android.jobjectArray) android.jobject {
-    _ = jni;
-    _ = method;
-    _ = args;
     std.log.info("Running invoke!", .{});
+    _ = method;
+    const length = jni.invokeJni(.GetArrayLength, .{args});
+    var i: i32 = 0;
+    while (i < length) : (i += 1) {
+        const object = jni.invokeJni(.GetObjectArrayElement, .{ args, i });
+        const string = android.jni.JNI.String.init(jni, jni.callObjectMethod(object, "toString", "()Ljava/lang/String;", .{}));
+        defer string.deinit(jni);
+        std.log.info("Arg {}: {}", .{ i, std.unicode.fmtUtf16le(string.slice) });
+    }
+
     return null;
 }
 

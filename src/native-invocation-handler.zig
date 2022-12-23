@@ -55,7 +55,8 @@ const InvocationHandler = struct {
     function: InvokeFn,
 
     /// Called by java class NativeInvocationHandler
-    pub fn invoke0(jni_env: *android.JNIEnv, this: android.jobject, method: android.jobject, args: android.jobjectArray) android.jobject {
+    pub fn invoke0(jni_env: *android.JNIEnv, this: android.jobject, proxy: android.jobject, method: android.jobject, args: android.jobjectArray) android.jobject {
+        _ = proxy; // This is the proxy object. Calling anything on it will cause invoke to be called. If this isn't explicitly handled, it will recurse infinitely
         const jni = android.jni.JNI.init(jni_env);
         const Class = jni.invokeJni(.GetObjectClass, .{this});
         const ptrField = jni.invokeJni(.GetFieldID, .{ Class, "ptr", "J" });
