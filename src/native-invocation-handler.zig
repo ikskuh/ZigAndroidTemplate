@@ -5,7 +5,7 @@ const Self = @This();
 class: android.jobject,
 initFn: android.jmethodID,
 
-pub fn init(jni: android.JNI, class: android.jobject) Self {
+pub fn init(jni: android.jni.JNI, class: android.jobject) Self {
     // const native_invocation_handler_buffer = @embedFile("NativeInvocationHandler.dex");
     // TODO: define class is not implemented on android
     // const NativeInvocationHandler = jni.invokeJni(.DefineClass, .{ "NativeInvocationHandler", class_loader, @ptrCast([*]const i8, &native_invocation_handler_buffer), native_invocation_handler_buffer.len });
@@ -25,7 +25,7 @@ pub fn init(jni: android.JNI, class: android.jobject) Self {
     };
 }
 
-pub fn createAlloc(self: Self, jni: android.JNI, alloc: std.mem.Allocator, pointer: ?*anyopaque, function: InvokeFn) !android.jobject {
+pub fn createAlloc(self: Self, jni: android.jni.JNI, alloc: std.mem.Allocator, pointer: ?*anyopaque, function: InvokeFn) !android.jobject {
     // Create a InvocationHandler struct
     var handler = try alloc.create(InvocationHandler);
     errdefer alloc.destroy(handler);
@@ -47,7 +47,7 @@ pub fn createAlloc(self: Self, jni: android.JNI, alloc: std.mem.Allocator, point
 }
 
 /// Function signature for invoke functions
-pub const InvokeFn = *const fn (?*anyopaque, *android.JNIEnv, android.jobject, android.jobjectArray) android.jobject;
+pub const InvokeFn = *const fn (?*anyopaque, android.jni.JNI, android.jobject, android.jobjectArray) android.jobject;
 
 /// InvocationHandler Technique found here https://groups.google.com/g/android-ndk/c/SRgy93Un8vM
 const InvocationHandler = struct {
@@ -56,13 +56,11 @@ const InvocationHandler = struct {
 
     /// Called by java class NativeInvocationHandler
     pub fn invoke0(jni_env: *android.JNIEnv, this: android.jobject, method: android.jobject, args: android.jobjectArray) android.jobject {
-        const Class = @call(.auto, @field(jni_env.*, "GetObjectClass"), .{ jni_env, this });
-        // const Class = jni.invokeJni(.GetObjectClass, .{this});
-        const ptrField = @call(.auto, @field(jni_env.*, "GetFieldID"), .{ jni_env, Class, "ptr", "J" });
-        // const ptrField = jni.invokeJni(.GetFieldID, .{ Class, "ptr", "J" });
-        const jptr = @call(.auto, @field(jni_env.*, "GetLongField"), .{ jni_env, this, ptrField });
-        // const jptr = jni.GetLongField(this, ptrField);
+        const jni = android.jni.JNI.init(jni_env);
+        const Class = jni.invokeJni(.GetObjectClass, .{this});
+        const ptrField = jni.invokeJni(.GetFieldID, .{ Class, "ptr", "J" });
+        const jptr = jni.getLongField(this, ptrField);
         const h = @intToPtr(*InvocationHandler, @intCast(usize, jptr));
-        return h.function(h.pointer, jni_env, method, args);
+        return h.function(h.pointer, jni, method, args);
     }
 };

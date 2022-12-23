@@ -7,7 +7,7 @@ const android = @import("android-bind.zig");
 const build_options = @import("build_options");
 
 pub const egl = @import("egl.zig");
-pub const JNI = @import("jni.zig").JNI;
+pub const jni = @import("jni.zig");
 pub const audio = @import("audio.zig");
 pub const NativeInvocationHandler = @import("native-invocation-handler.zig");
 

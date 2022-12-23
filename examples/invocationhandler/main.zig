@@ -6,7 +6,7 @@ pub const panic = android.panic;
 pub const log = android.log;
 
 const EGLContext = android.egl.EGLContext;
-const JNI = android.JNI;
+const JNI = android.jni.JNI;
 const c = android.egl.c;
 const NativeInvocationHandler = android.NativeInvocationHandler;
 
@@ -16,7 +16,7 @@ comptime {
     _ = @import("root").log;
 }
 
-pub fn timerInvoke(_: ?*anyopaque, jni: *android.JNIEnv, method: android.jobject, args: android.jobjectArray) android.jobject {
+pub fn timerInvoke(_: ?*anyopaque, jni: android.jni.JNI, method: android.jobject, args: android.jobjectArray) android.jobject {
     _ = jni;
     _ = method;
     _ = args;
@@ -31,9 +31,9 @@ pub const AndroidApp = struct {
     running: bool = true,
 
     // The JNIEnv of the UI thread
-    uiJni: JNI = undefined,
+    uiJni: android.jni.NativeActivity = undefined,
     // The JNIEnv of the app thread
-    mainJni: JNI = undefined,
+    mainJni: android.jni.NativeActivity = undefined,
 
     invocation_handler: NativeInvocationHandler = undefined,
 
@@ -62,15 +62,14 @@ pub const AndroidApp = struct {
         self.pipe = try std.os.pipe();
         android.ALooper_acquire(self.uiThreadLooper);
 
-        var jni = JNI.init(self.activity);
-        self.uiJni = jni;
+        var native_activity = android.jni.NativeActivity.init(self.activity);
+        var jni = native_activity.jni;
+        self.uiJni = native_activity;
 
         // Get the window object attached to our activity
         const activityClass = jni.findClass("android/app/NativeActivity");
         const getWindow = jni.invokeJni(.GetMethodID, .{ activityClass, "getWindow", "()Landroid/view/Window;" });
-        // const getClassLoader = jni.invokeJni(.GetMethodID, .{ activityClass, "getClassLoader", "()Ljava/lang/ClassLoader;" });
         const activityWindow = jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getWindow });
-        // const classLoader = jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getClassLoader });
         const WindowClass = jni.findClass("android/view/Window");
 
         // This disables the surface handler set by default by android.view.NativeActivity
@@ -153,7 +152,8 @@ pub const AndroidApp = struct {
     }
 
     fn setAppContentView(self: *AndroidApp) void {
-        const jni = self.getJni();
+        const native_activity = android.jni.NativeActivity.get(self.activity);
+        const jni = native_activity.jni;
 
         // We create a new Button..
         std.log.warn("Creating android.widget.Button", .{});
@@ -185,7 +185,7 @@ pub const AndroidApp = struct {
     }
 
     fn mainLoop(self: *AndroidApp) !void {
-        self.mainJni = JNI.init(self.activity);
+        self.mainJni = android.jni.NativeActivity.init(self.activity);
         defer self.mainJni.deinit();
 
         try self.runOnUiThread(setAppContentView, .{self});
