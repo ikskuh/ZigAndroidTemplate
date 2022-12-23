@@ -16,11 +16,12 @@ comptime {
     _ = @import("root").log;
 }
 
-pub fn timerInvoke(_: ?*anyopaque, jni: JNI, method: android.jobject, args: android.jobjectArray) void {
+pub fn timerInvoke(_: ?*anyopaque, jni: *android.JNIEnv, method: android.jobject, args: android.jobjectArray) android.jobject {
     _ = jni;
     _ = method;
     _ = args;
-    std.log.info("Running timer!", .{});
+    std.log.info("Running invoke!", .{});
+    return null;
 }
 
 pub const AndroidApp = struct {
