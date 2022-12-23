@@ -16,9 +16,18 @@ comptime {
     _ = @import("root").log;
 }
 
-pub fn timerInvoke(_: ?*anyopaque, jni: android.jni.JNI, method: android.jobject, args: android.jobjectArray) android.jobject {
+const ButtonData = struct {
+    count: usize = 0,
+};
+
+pub fn timerInvoke(data: ?*anyopaque, jni: android.jni.JNI, method: android.jobject, args: android.jobjectArray) android.jobject {
+    var btn_data = @ptrCast(*ButtonData, @alignCast(@alignOf(*ButtonData), data));
+    btn_data.count += 1;
     std.log.info("Running invoke!", .{});
-    _ = method;
+    const method_name = android.jni.JNI.String.init(jni, jni.callObjectMethod(method, "getName", "()Ljava/lang/String;", .{}));
+    defer method_name.deinit(jni);
+    std.log.info("Method {}", .{std.unicode.fmtUtf16le(method_name.slice)});
+
     const length = jni.invokeJni(.GetArrayLength, .{args});
     var i: i32 = 0;
     while (i < length) : (i += 1) {
@@ -26,6 +35,14 @@ pub fn timerInvoke(_: ?*anyopaque, jni: android.jni.JNI, method: android.jobject
         const string = android.jni.JNI.String.init(jni, jni.callObjectMethod(object, "toString", "()Ljava/lang/String;", .{}));
         defer string.deinit(jni);
         std.log.info("Arg {}: {}", .{ i, std.unicode.fmtUtf16le(string.slice) });
+
+        if (i == 0) {
+            const Button = jni.findClass("android/widget/Button");
+            const setText = jni.invokeJni(.GetMethodID, .{ Button, "setText", "(Ljava/lang/CharSequence;)V" });
+            var buf: [256:0]u8 = undefined;
+            const str = std.fmt.bufPrintZ(&buf, "Pressed {} times!", .{btn_data.count}) catch "formatting bug";
+            jni.invokeJni(.CallVoidMethod, .{ object, setText, jni.newString(str) });
+        }
     }
 
     return null;
@@ -52,6 +69,8 @@ pub const AndroidApp = struct {
     uiThreadCondition: std.atomic.Atomic(u32) = std.atomic.Atomic(u32).init(0),
     uiThreadLooper: *android.ALooper = undefined,
     uiThreadId: std.Thread.Id = undefined,
+
+    btn_data: ButtonData = .{},
 
     pub fn init(allocator: std.mem.Allocator, activity: *android.ANativeActivity, stored_state: ?[]const u8) !AndroidApp {
         _ = stored_state;
@@ -241,7 +260,7 @@ pub const AndroidApp = struct {
         self.invocation_handler = NativeInvocationHandler.init(jni, class);
 
         // Create a TimerTask invoker
-        const invocation_handler = try self.invocation_handler.createAlloc(jni, self.allocator, null, &timerInvoke);
+        const invocation_handler = try self.invocation_handler.createAlloc(jni, self.allocator, &self.btn_data, &timerInvoke);
 
         std.log.info("Creating Interface array", .{});
         const interface_array = jni.invokeJni(.NewObjectArray, .{
