@@ -54,8 +54,35 @@ pub const JNI = struct {
         return self.invokeJni(.FindClass, .{class.ptr});
     }
 
+    pub const String = struct {
+        jstring: android.jstring,
+        slice: []const u16,
+
+        pub fn init(self: Self, string: android.jstring) String {
+            const len = self.invokeJni(.GetStringLength, .{string});
+            const ptr = self.invokeJni(.GetStringChars, .{ string, null });
+            const slice = ptr[0..@intCast(usize, len)];
+            return String{
+                .jstring = string,
+                .slice = slice,
+            };
+        }
+
+        pub fn deinit(string: String, self: Self) void {
+            self.invokeJni(.ReleaseStringChars, .{ string.jstring, string.slice.ptr });
+        }
+    };
+
+    pub fn getClassNameString(self: Self, object: android.jobject) String {
+        const object_class = self.invokeJni(.GetObjectClass, .{object});
+        const ClassClass = self.findClass("java/lang/Class");
+        const getName = self.invokeJni(.GetMethodID, .{ ClassClass, "getName", "()Ljava/lang/String;" });
+        const name = self.invokeJni(.CallObjectMethod, .{ object_class, getName });
+        return String.init(self, name);
+    }
+
     pub fn newString(self: Self, string: [*:0]const u8) android.jstring {
-        return self.invokeJni(.NewStringUTF, .{ string });
+        return self.invokeJni(.NewStringUTF, .{string});
     }
 
     pub fn AndroidGetUnicodeChar(self: *Self, keyCode: c_int, metaState: c_int) u21 {

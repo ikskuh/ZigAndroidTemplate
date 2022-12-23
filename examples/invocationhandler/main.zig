@@ -72,8 +72,6 @@ pub const AndroidApp = struct {
         // const classLoader = jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getClassLoader });
         const WindowClass = jni.findClass("android/view/Window");
 
-        try self.runTimer(jni);
-
         // This disables the surface handler set by default by android.view.NativeActivity
         // This way we let the content view do the drawing instead of us.
         const takeSurface = jni.invokeJni(.GetMethodID, .{ WindowClass, "takeSurface", "(Landroid/view/SurfaceHolder$Callback2;)V" });
@@ -156,15 +154,23 @@ pub const AndroidApp = struct {
     fn setAppContentView(self: *AndroidApp) void {
         const jni = self.getJni();
 
-        // We create a new TextView..
-        std.log.warn("Creating android.widget.TextView", .{});
-        const TextView = jni.findClass("android/widget/TextView");
-        const textViewInit = jni.invokeJni(.GetMethodID, .{ TextView, "<init>", "(Landroid/content/Context;)V" });
-        const textView = jni.invokeJni(.NewObject, .{ TextView, textViewInit, self.activity.clazz });
+        // We create a new Button..
+        std.log.warn("Creating android.widget.Button", .{});
+        const Button = jni.findClass("android/widget/Button");
+        // methods
+        const buttonInit = jni.invokeJni(.GetMethodID, .{ Button, "<init>", "(Landroid/content/Context;)V" });
+        const setOnClickListener = jni.invokeJni(.GetMethodID, .{ Button, "setOnClickListener", "(Landroid/view/View$OnClickListener;)V" });
+        const setText = jni.invokeJni(.GetMethodID, .{ Button, "setText", "(Ljava/lang/CharSequence;)V" });
+        // invocations
+        // init
+        const button = jni.invokeJni(.NewObject, .{ Button, buttonInit, self.activity.clazz });
 
         // .. and set its text to "Hello from Zig!"
-        const setText = jni.invokeJni(.GetMethodID, .{ TextView, "setText", "(Ljava/lang/CharSequence;)V" });
-        jni.invokeJni(.CallVoidMethod, .{ textView, setText, jni.newString("Hello from Zig!") });
+        jni.invokeJni(.CallVoidMethod, .{ button, setText, jni.newString("Hello from Zig!") });
+        // set onclick callback
+        const listener = self.getOnClickListener(jni) catch @panic("help");
+        std.log.info("Listener {any}", .{listener});
+        jni.invokeJni(.CallVoidMethod, .{ button, setOnClickListener, listener });
 
         // And then we use it as our content view!
         std.log.err("Attempt to call NativeActivity.setContentView()", .{});
@@ -173,7 +179,7 @@ pub const AndroidApp = struct {
         jni.invokeJni(.CallVoidMethod, .{
             self.activity.clazz,
             setContentView,
-            textView,
+            button,
         });
     }
 
@@ -187,7 +193,7 @@ pub const AndroidApp = struct {
         }
     }
 
-    fn runTimer(self: *AndroidApp, jni: JNI) !void {
+    fn getOnClickListener(self: *AndroidApp, jni: JNI) !android.jobject {
         // Get class loader
         // const activityClass = self.activity.clazz;
         const activityClass = jni.findClass("android/app/NativeActivity");
@@ -224,43 +230,25 @@ pub const AndroidApp = struct {
         jni.invokeJni(.DeleteLocalRef, .{strClassName});
 
         // Get invocation handler factory
-        std.log.info("Creating invocation handler", .{});
         self.invocation_handler = NativeInvocationHandler.init(jni, class);
 
         // Create a TimerTask invoker
-        std.log.info("Creating timer task invoker", .{});
-        const TimerTaskInvoker = try self.invocation_handler.createAlloc(jni, self.allocator, null, &timerInvoke);
+        const invocation_handler = try self.invocation_handler.createAlloc(jni, self.allocator, null, &timerInvoke);
 
         std.log.info("Creating Interface array", .{});
         const interface_array = jni.invokeJni(.NewObjectArray, .{
             1,
             jni.findClass("java/lang/Class"),
-            jni.findClass("java/lang/Runnable"),
+            jni.findClass("android/view/View$OnClickListener"),
         });
 
         std.log.info("Creating proxy class", .{});
         const Proxy = jni.findClass("java/lang/reflect/Proxy");
         const newProxyInstance = jni.invokeJni(.GetStaticMethodID, .{ Proxy, "newProxyInstance", "(Ljava/lang/ClassLoader;[Ljava/lang/Class;Ljava/lang/reflect/InvocationHandler;)Ljava/lang/Object;" });
+        const proxy = jni.invokeJni(.CallStaticObjectMethod, .{ Proxy, newProxyInstance, cls, interface_array, invocation_handler });
 
-        std.log.info("newProxyInstance {any}, cls {any}, interfaceArray {any}, TimerTaskInvoker {any}", .{ interface_array, cls, newProxyInstance, TimerTaskInvoker });
+        std.log.info("newProxyInstance {any}, cls {any}, interfaceArray {any}, invocationHandler {any}", .{ cls, newProxyInstance, interface_array, invocation_handler });
 
-        // Create the proxy object
-        std.log.info("Creating timer task proxy", .{});
-        const timer_task_proxy = jni.invokeJni(.CallStaticObjectMethod, .{ Proxy, newProxyInstance, cls, interface_array, TimerTaskInvoker });
-
-        std.log.info("Creating timer", .{});
-        const Timer = jni.findClass("java/util/Timer");
-        const timerInit = jni.invokeJni(.GetMethodID, .{ Timer, "<init>", "()V" });
-        const timer = jni.invokeJni(.NewObject, .{ Timer, timerInit });
-
-        std.log.info("Scheduling task", .{});
-        const schedule = jni.invokeJni(.GetMethodID, .{ Timer, "schedule", "(Ljava/util/TimerTask;J)V" });
-
-        const Long = jni.findClass("java/lang/Long");
-        const longInit = jni.invokeJni(.GetMethodID, .{ Long, "<init>", "(J)V" });
-        const delay: u64 = 10000;
-        const delay_long = jni.invokeJni(.NewObject, .{ Long, longInit, delay }) orelse return error.LongInit;
-
-        jni.invokeJni(.CallVoidMethod, .{ timer, schedule, timer_task_proxy, delay_long });
+        return proxy;
     }
 };
