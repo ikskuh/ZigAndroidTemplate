@@ -7,9 +7,10 @@ const android = @import("android-bind.zig");
 const build_options = @import("build_options");
 
 pub const egl = @import("egl.zig");
-pub const jni = @import("jni.zig");
+pub const JNI = @import("jni.zig").JNI;
 pub const audio = @import("audio.zig");
-pub const NativeInvocationHandler = @import("native-invocation-handler.zig");
+pub const NativeActivity = @import("NativeActivity.zig");
+pub const NativeInvocationHandler = @import("NativeInvocationHandler.zig");
 
 const app_log = std.log.scoped(.app_glue);
 
