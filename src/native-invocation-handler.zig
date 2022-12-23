@@ -17,7 +17,7 @@ pub fn init(jni: android.JNI, class: android.jobject) Self {
     };
 }
 
-pub fn createAlloc(self: Self, jni: android.JNI, alloc: std.mem.Allocator, pointer: ?*anyopaque, function: InvokeFn) !*InvocationHandler {
+pub fn createAlloc(self: Self, jni: android.JNI, alloc: std.mem.Allocator, pointer: ?*anyopaque, function: InvokeFn) !android.jobject {
     // Create a InvocationHandler struct
     var handler = try alloc.create(InvocationHandler);
     errdefer alloc.destroy(handler);
@@ -32,9 +32,10 @@ pub fn createAlloc(self: Self, jni: android.JNI, alloc: std.mem.Allocator, point
     // Call handler constructor
     const result = jni.invokeJni(.NewObject, .{ self.class, self.initFn, handler_value }) orelse return error.InvocationHandlerInitError;
     // if (result != null) return error.InvocationHandlerInitError;
-    _ = result;
+    // _ = result;
+    return result;
 
-    return handler;
+    // return handler;
 }
 
 /// Function signature for invoke functions

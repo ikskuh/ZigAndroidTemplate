@@ -67,7 +67,9 @@ pub const AndroidApp = struct {
         // Get the window object attached to our activity
         const activityClass = jni.findClass("android/app/NativeActivity");
         const getWindow = jni.invokeJni(.GetMethodID, .{ activityClass, "getWindow", "()Landroid/view/Window;" });
+        // const getClassLoader = jni.invokeJni(.GetMethodID, .{ activityClass, "getClassLoader", "()Ljava/lang/ClassLoader;" });
         const activityWindow = jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getWindow });
+        // const classLoader = jni.invokeJni(.CallObjectMethod, .{ self.activity.clazz, getClassLoader });
         const WindowClass = jni.findClass("android/view/Window");
 
         try self.runTimer(jni);
@@ -202,12 +204,8 @@ pub const AndroidApp = struct {
         std.log.info("invocation_handler_class {any}, {}", .{ invocation_handler_class, result });
         if (result != 0) jni.invokeJni(.ExceptionClear, .{});
         const invocation_handler_class_full = jni.findClass("net/random_projects/zig_android_template/NativeInvocationHandler");
-        result = jni.invokeJni(.ExceptionCheck, .{});
         std.log.info("invocation_handler_class_full {any}, {}", .{ invocation_handler_class_full, result });
-        if (result != 0) jni.invokeJni(.ExceptionClear, .{});
-        const invocation_handler_class_dot = jni.findClass("net.random_projects.zig_android_template.NativeInvocationHandler");
         result = jni.invokeJni(.ExceptionCheck, .{});
-        std.log.info("invocation_handler_class_dot {any}, {}", .{ invocation_handler_class_dot, result });
         if (result != 0) jni.invokeJni(.ExceptionClear, .{});
 
         const getPackages = jni.invokeJni(.GetMethodID, .{ classLoader, "getPackages", "()[Ljava/lang/Package;" });
@@ -216,8 +214,13 @@ pub const AndroidApp = struct {
         std.log.info("There are {} packages", .{array_length});
 
         const findClass = jni.invokeJni(.GetMethodID, .{ classLoader, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;" });
-        const strClassName = jni.invokeJni(.NewStringUTF, .{"net/random_projects/zig_android_template/NativeInvocationHandler"});
+        const strClassName = jni.invokeJni(.NewStringUTF, .{"NativeInvocationHandler"});
         const class = jni.invokeJni(.CallObjectMethod, .{ cls, findClass, strClassName });
+        result = jni.invokeJni(.ExceptionCheck, .{});
+        if (result != 0) {
+            std.log.info("Exception while calling loadClass", .{});
+            jni.invokeJni(.ExceptionDescribe, .{});
+        }
         jni.invokeJni(.DeleteLocalRef, .{strClassName});
 
         // Get invocation handler factory
@@ -228,16 +231,18 @@ pub const AndroidApp = struct {
         std.log.info("Creating timer task invoker", .{});
         const TimerTaskInvoker = try self.invocation_handler.createAlloc(jni, self.allocator, null, &timerInvoke);
 
-        std.log.info("Creating proxy class", .{});
-        const Proxy = jni.findClass("java/lang/reflect/Proxy");
-        const newProxyInstance = jni.invokeJni(.GetMethodID, .{ Proxy, "newProxyInstance", "(Ljava/lang/reflect/ClassLoader;[Ljava/lang/Class;Ljava/lang/reflect/InvocationHandler;)" });
-
         std.log.info("Creating Interface array", .{});
         const interface_array = jni.invokeJni(.NewObjectArray, .{
             1,
             jni.findClass("java/lang/Class"),
-            jni.findClass("java/util/TimerTask"),
+            jni.findClass("java/lang/Runnable"),
         });
+
+        std.log.info("Creating proxy class", .{});
+        const Proxy = jni.findClass("java/lang/reflect/Proxy");
+        const newProxyInstance = jni.invokeJni(.GetStaticMethodID, .{ Proxy, "newProxyInstance", "(Ljava/lang/ClassLoader;[Ljava/lang/Class;Ljava/lang/reflect/InvocationHandler;)Ljava/lang/Object;" });
+
+        std.log.info("newProxyInstance {any}, cls {any}, interfaceArray {any}, TimerTaskInvoker {any}", .{ interface_array, cls, newProxyInstance, TimerTaskInvoker });
 
         // Create the proxy object
         std.log.info("Creating timer task proxy", .{});
