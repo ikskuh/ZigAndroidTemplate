@@ -40,11 +40,8 @@ pub const JNI = opaque {
 
     // Convenience functions
 
-    pub fn findClass(jni: *JNI, class: [:0]const u8) Error!android.jclass {
-        return jni.invokeJni(.FindClass, .{class.ptr}) catch {
-            log.err("Class Not Found: {s}", .{class});
-            return Error.ClassNotDefined;
-        };
+    pub fn findClass(jni: *JNI, class: [:0]const u8) Error!Class {
+        return Class.init(jni, class);
     }
 
     pub fn getClassNameString(jni: *JNI, object: android.jobject) Error!String {
@@ -69,11 +66,67 @@ pub const JNI = opaque {
         return jni.invokeJni(.GetLongField, .{ object, field_id });
     }
 
-    pub fn callObjectMethod(jni: *JNI, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) Error!JniReturnType(.CallObjectMethod) {
+    pub inline fn callObjectMethod(jni: *JNI, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) Error!JniReturnType(.CallObjectMethod) {
         const object_class = try jni.invokeJni(.GetObjectClass, .{object});
         const method_id = try jni.invokeJni(.GetMethodID, .{ object_class, name, signature });
         return jni.invokeJni(.CallObjectMethod, .{ object, method_id } ++ args);
     }
+
+    pub const Class = struct {
+        jni: *JNI,
+        class: android.jclass,
+
+        pub fn init(jni: *JNI, class_name: [:0]const u8) !Class {
+            const class = jni.invokeJni(.FindClass, .{class_name.ptr}) catch {
+                log.err("Class Not Found: {s}", .{class_name});
+                return Error.ClassNotDefined;
+            };
+            return Class{
+                .jni = jni,
+                .class = class,
+            };
+        }
+
+        pub inline fn newObject(class: Class, signature: [:0]const u8, args: anytype) Error!JniReturnType(.NewObject) {
+            const method_id = try class.jni.invokeJni(.GetMethodID, .{ class.class, "<init>", signature });
+            return try class.jni.invokeJni(.NewObject, .{ class.class, method_id } ++ args);
+        }
+
+        pub inline fn getStaticIntField(class: Class, name: [:0]const u8) !android.jint {
+            const field_id = try class.jni.invokeJni(.GetStaticFieldID, .{ class.class, name, "I" });
+            return try class.jni.invokeJni(.GetStaticIntField, .{ class.class, field_id });
+        }
+
+        pub inline fn getStaticObjectField(class: Class, name: [:0]const u8, signature: [:0]const u8) !android.jobject {
+            const field_id = try class.jni.invokeJni(.GetStaticFieldID, .{ class.class, name, signature });
+            return try class.jni.invokeJni(.GetStaticObjectField, .{ class.class, field_id });
+        }
+
+        pub inline fn callVoidMethod(class: Class, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) Error!void {
+            const method_id = try class.jni.invokeJni(.GetMethodID, .{ class.class, name, signature });
+            try class.jni.invokeJni(.CallVoidMethod, .{ object, method_id } ++ args);
+        }
+
+        pub inline fn callIntMethod(class: Class, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) Error!android.jint {
+            const method_id = try class.jni.invokeJni(.GetMethodID, .{ class.class, name, signature });
+            return try class.jni.invokeJni(.CallIntMethod, .{ object, method_id } ++ args);
+        }
+
+        pub inline fn callBooleanMethod(class: Class, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) Error!bool {
+            const method_id = try class.jni.invokeJni(.GetMethodID, .{ class.class, name, signature });
+            return try class.jni.invokeJni(.CallBooleanMethod, .{ object, method_id } ++ args) == android.JNI_TRUE;
+        }
+
+        pub inline fn callObjectMethod(class: Class, object: android.jobject, name: [:0]const u8, signature: [:0]const u8, args: anytype) Error!android.jobject {
+            const method_id = try class.jni.invokeJni(.GetMethodID, .{ class.class, name, signature });
+            return class.jni.invokeJni(.CallObjectMethod, .{ object, method_id } ++ args);
+        }
+
+        pub inline fn callStaticObjectMethod(class: Class, name: [:0]const u8, signature: [:0]const u8, args: anytype) Error!android.jobject {
+            const method_id = try class.jni.invokeJni(.GetStaticMethodID, .{ class.class, name, signature });
+            return try class.jni.invokeJni(.CallStaticObjectMethod, .{ class.class, method_id } ++ args);
+        }
+    };
 
     pub const String = struct {
         jstring: android.jstring,
