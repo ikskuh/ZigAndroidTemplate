@@ -75,10 +75,15 @@ pub fn build(b: *std.build.Builder) !void {
         .textview => "examples/textview/main.zig",
         .invocationhandler => "examples/invocationhandler/main.zig",
     };
+    const dex: ?[:0]const u8 = switch (example) {
+        .invocationhandler => "classes.dex",
+        else => null,
+    };
 
     const app = sdk.createApp(
         "app-template.apk",
         src,
+        dex,
         config,
         mode,
         .{

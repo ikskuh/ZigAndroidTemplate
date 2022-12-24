@@ -406,6 +406,7 @@ pub fn createApp(
     sdk: *Sdk,
     apk_file: []const u8,
     src_file: []const u8,
+    dex_file_opt: ?[]const u8,
     app_config: AppConfig,
     mode: std.builtin.Mode,
     wanted_targets: AppTargetConfig,
@@ -460,35 +461,28 @@ pub fn createApp(
             , .{perm}) catch unreachable;
         }
 
-        if (app_config.fullscreen) {
-            writer.writeAll(
-                \\    <application android:debuggable="true" android:hasCode="true" android:label="@string/app_name" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon" >
-                \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
-                \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
-                \\            <intent-filter>
-                \\                <action android:name="android.intent.action.MAIN"/>
-                \\                <category android:name="android.intent.category.LAUNCHER"/>
-                \\            </intent-filter>
-                \\        </activity>
-                \\    </application>
-                \\</manifest>
-                \\
-            ) catch unreachable;
-        } else {
-            writer.writeAll(
-                \\    <application android:debuggable="true" android:hasCode="true" android:label="@string/app_name" tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon">
-                \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
-                \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
-                \\            <intent-filter>
-                \\                <action android:name="android.intent.action.MAIN"/>
-                \\                <category android:name="android.intent.category.LAUNCHER"/>
-                \\            </intent-filter>
-                \\        </activity>
-                \\    </application>
-                \\</manifest>
-                \\
-            ) catch unreachable;
-        }
+        const theme = if (app_config.fullscreen)
+            \\android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+        else
+            \\
+            ;
+
+        writer.print(
+            \\    <application android:debuggable="true" android:hasCode="{[hasCode]}" android:label="@string/app_name" {[theme]s} tools:replace="android:icon,android:theme,android:allowBackup,label" android:icon="@mipmap/icon" >
+            \\        <activity android:configChanges="keyboardHidden|orientation" android:name="android.app.NativeActivity">
+            \\            <meta-data android:name="android.app.lib_name" android:value="@string/lib_name"/>
+            \\            <intent-filter>
+            \\                <action android:name="android.intent.action.MAIN"/>
+            \\                <category android:name="android.intent.category.LAUNCHER"/>
+            \\            </intent-filter>
+            \\        </activity>
+            \\    </application>
+            \\</manifest>
+            \\
+        , .{
+            .hasCode = dex_file_opt != null,
+            .theme = theme,
+        }) catch unreachable;
 
         break :blk buf.toOwnedSlice() catch unreachable;
     });
@@ -578,9 +572,11 @@ pub fn createApp(
 
     const align_step = sdk.alignApk(unaligned_apk_file, apk_file);
 
-    const copy_dex_to_zip = CopyToZipStep.create(sdk, unaligned_apk_file, null, std.build.FileSource.relative("classes.dex"));
-    copy_dex_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
-    align_step.dependOn(&copy_dex_to_zip.step);
+    if (dex_file_opt) |dex_file| {
+        const copy_dex_to_zip = CopyToZipStep.create(sdk, unaligned_apk_file, null, std.build.FileSource.relative(dex_file));
+        copy_dex_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
+        align_step.dependOn(&copy_dex_to_zip.step);
+    }
 
     const sign_step = sdk.signApk(apk_file, key_store);
     sign_step.dependOn(align_step);
