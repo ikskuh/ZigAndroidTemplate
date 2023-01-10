@@ -75,8 +75,8 @@ pub fn build(b: *std.build.Builder) !void {
         .textview => "examples/textview/main.zig",
         .invocationhandler => "examples/invocationhandler/main.zig",
     };
-    const dex: ?[:0]const u8 = switch (example) {
-        .invocationhandler => "classes.dex",
+    const dex: ?[]const [:0]const u8 = switch (example) {
+        .invocationhandler => &[_][:0]const u8{"src/NativeInvocationHandler.java"},
         else => null,
     };
 

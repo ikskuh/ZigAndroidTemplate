@@ -62,6 +62,7 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
 
         const zipalign = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "zipalign" ++ exe }) catch unreachable;
         const aapt = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "aapt" ++ exe }) catch unreachable;
+        const d8 = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "d8" ++ exe }) catch unreachable;
         const adb = blk1: {
             const adb_sdk = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "platform-tools", "adb" ++ exe }) catch unreachable;
             if (!auto_detect.fileExists(adb_sdk)) {
@@ -71,6 +72,7 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
         };
         const apksigner = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "apksigner" ++ exe }) catch unreachable;
         const keytool = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.java_home, "bin", "keytool" ++ exe }) catch unreachable;
+        const javac = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.java_home, "bin", "javac" ++ exe }) catch unreachable;
 
         break :blk SystemTools{
             .zipalign = zipalign,
@@ -78,6 +80,8 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
             .adb = adb,
             .apksigner = apksigner,
             .keytool = keytool,
+            .javac = javac,
+            .d8 = d8,
         };
     };
 
@@ -237,6 +241,8 @@ pub const SystemTools = struct {
     adb: []const u8 = "adb",
     apksigner: []const u8 = "apksigner",
     keytool: []const u8 = "keytool",
+    javac: []const u8 = "javac",
+    d8: []const u8 = "d8",
 };
 
 /// The configuration which targets a app should be built for.
@@ -406,7 +412,7 @@ pub fn createApp(
     sdk: *Sdk,
     apk_file: []const u8,
     src_file: []const u8,
-    dex_file_opt: ?[]const u8,
+    java_files_opt: ?[]const []const u8,
     app_config: AppConfig,
     mode: std.builtin.Mode,
     wanted_targets: AppTargetConfig,
@@ -480,7 +486,7 @@ pub fn createApp(
             \\</manifest>
             \\
         , .{
-            .hasCode = dex_file_opt != null,
+            .hasCode = java_files_opt != null,
             .theme = theme,
         }) catch unreachable;
 
@@ -540,8 +546,6 @@ pub fn createApp(
         sdk.b.pathFromRoot(unaligned_apk_file),
         "-I", // add an existing package to base include set
         root_jar,
-        "-I",
-        "classes.dex",
     });
 
     make_unsigned_apk.addArg("-M"); // specify full path to AndroidManifest.xml to include in zip
@@ -560,6 +564,16 @@ pub fn createApp(
         make_unsigned_apk.addArg(sdk.b.pathFromRoot(dir));
     }
 
+    for (make_unsigned_apk.argv.items) |arg| {
+        if (arg == .bytes) {
+            std.log.info("{s}", .{arg.bytes});
+        } else {
+            std.log.info("{any}", .{arg});
+        }
+    }
+    // const log_step = sdk.b.addLog("{any}", .{make_unsigned_apk.argv});
+    // make_unsigned_apk.step.dependOn(&log_step.step);
+
     var libs = std.ArrayList(*std.build.LibExeObjStep).init(sdk.b.allocator);
     defer libs.deinit();
 
@@ -572,10 +586,44 @@ pub fn createApp(
 
     const align_step = sdk.alignApk(unaligned_apk_file, apk_file);
 
-    if (dex_file_opt) |dex_file| {
-        const copy_dex_to_zip = CopyToZipStep.create(sdk, unaligned_apk_file, null, std.build.FileSource.relative(dex_file));
-        copy_dex_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
-        align_step.dependOn(&copy_dex_to_zip.step);
+    const java_dir = sdk.b.getInstallPath(.lib, "java");
+    if (java_files_opt) |java_files| {
+        const d8_cmd_builder = sdk.b.addSystemCommand(&[_][]const u8{sdk.system_tools.d8});
+
+        d8_cmd_builder.addArg("--lib");
+        d8_cmd_builder.addArg(root_jar);
+
+        for (java_files) |java_file| {
+            const javac_cmd = sdk.b.addSystemCommand(&[_][]const u8{
+                sdk.system_tools.javac,
+                "-cp",
+                root_jar,
+                "-d",
+                java_dir,
+            });
+            javac_cmd.addFileSourceArg(std.build.FileSource.relative(java_file));
+
+            const name = std.fs.path.stem(java_file);
+            const name_ext = sdk.b.fmt("{s}.class", .{name});
+            const class_file = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ java_dir, name_ext }) catch unreachable;
+
+            d8_cmd_builder.addFileSourceArg(.{ .path = class_file });
+            d8_cmd_builder.step.dependOn(&javac_cmd.step);
+        }
+
+        d8_cmd_builder.addArg("--classpath");
+        d8_cmd_builder.addArg(java_dir);
+        d8_cmd_builder.addArg("--output");
+        d8_cmd_builder.addArg(java_dir);
+        // make_unsigned_apk.step.dependOn(&d8_cmd_builder.step);
+        d8_cmd_builder.step.dependOn(&make_unsigned_apk.step);
+
+        const dex_file = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ java_dir, "classes.dex" }) catch unreachable;
+        // make_unsigned_apk.addArg("-I");
+        // make_unsigned_apk.addArg(dex_file);
+        const copy_to_zip = CopyToZipStep.create(sdk, unaligned_apk_file, null, .{ .path = dex_file });
+        copy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
+        align_step.dependOn(&copy_to_zip.step);
     }
 
     const sign_step = sdk.signApk(apk_file, key_store);
