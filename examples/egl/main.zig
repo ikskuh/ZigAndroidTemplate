@@ -4,7 +4,6 @@ const android = @import("android");
 
 const audio = android.audio;
 pub const panic = android.panic;
-pub const log = android.log;
 
 const EGLContext = android.egl.EGLContext;
 const JNI = android.JNI;
