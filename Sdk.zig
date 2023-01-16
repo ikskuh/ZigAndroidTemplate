@@ -59,6 +59,7 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
 
     const system_tools = blk: {
         const exe = if (builtin.os.tag == .windows) ".exe" else "";
+        const bat = if (builtin.os.tag == .windows) ".bat" else "";
 
         const zipalign = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "zipalign" ++ exe }) catch unreachable;
         const aapt = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "aapt" ++ exe }) catch unreachable;
@@ -70,7 +71,7 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
             }
             break :blk1 adb_sdk;
         };
-        const apksigner = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "apksigner" ++ exe }) catch unreachable;
+        const apksigner = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.android_sdk_root, "build-tools", toolchains.build_tools_version, "apksigner" ++ bat }) catch unreachable;
         const keytool = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.java_home, "bin", "keytool" ++ exe }) catch unreachable;
         const javac = std.fs.path.join(b.allocator, &[_][]const u8{ actual_user_config.java_home, "bin", "javac" ++ exe }) catch unreachable;
 
@@ -955,7 +956,7 @@ pub fn signApk(sdk: Sdk, apk_file: []const u8, key_store: KeyStore) *Step {
         key_store.file,
         "--ks-pass",
         pass,
-        sdk.b.pathFromRoot(apk_file),
+        apk_file,
         // key_store.alias,
     });
     return &sign_apk.step;
