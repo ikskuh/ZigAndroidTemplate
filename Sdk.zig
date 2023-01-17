@@ -956,7 +956,8 @@ pub fn signApk(sdk: Sdk, apk_file: []const u8, key_store: KeyStore) *Step {
         key_store.file,
         "--ks-pass",
         pass,
-        apk_file,
+        // omit full path on Windows to avoid problems with spaces in the path
+        if (builtin.os.tag == .windows) apk_file else sdk.b.pathFromRoot(apk_file),
         // key_store.alias,
     });
     return &sign_apk.step;
