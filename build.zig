@@ -8,7 +8,7 @@ const Sdk = @import("Sdk.zig");
 pub fn build(b: *std.build.Builder) !void {
     // Default-initialize SDK
     const sdk = Sdk.init(b, null, .{});
-    const mode = b.standardReleaseOptions();
+    const mode = b.standardOptimizeOption(.{});
     const android_version = b.option(Sdk.AndroidVersion, "android", "Select the android version, default is 'android5'") orelse .android5;
     const aaudio = b.option(bool, "aaudio", "Compile with support for AAudio, default is 'false'") orelse false;
     const opensl = b.option(bool, "opensl", "Compile with support for OpenSL ES, default is 'true'") orelse true;
@@ -95,9 +95,11 @@ pub fn build(b: *std.build.Builder) !void {
         key_store,
     );
 
+    const android_module = b.modules.get("android") orelse unreachable;
+
     for (app.libraries) |exe| {
         // Provide the "android" package in each executable we build
-        exe.addPackage(app.getAndroidPackage("android"));
+        exe.addModule("android", android_module);
     }
 
     // Make the app build when we invoke "zig build" or "zig build install"

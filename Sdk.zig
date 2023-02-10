@@ -88,7 +88,10 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
 
     // Compiles all required additional tools for toolchain.
     const host_tools = blk: {
-        const zip_add = b.addExecutable("zip_add", sdkRoot() ++ "/tools/zip_add.zig");
+        const zip_add = b.addExecutable(.{
+            .name = "zip_add",
+            .root_source_file = .{ .path = sdkRoot() ++ "/tools/zip_add.zig" },
+        });
         zip_add.addCSourceFile(sdkRoot() ++ "/vendor/kuba-zip/zip.c", &[_][]const u8{
             "-std=c99",
             "-fno-sanitize=undefined",
@@ -585,6 +588,15 @@ pub fn createApp(
     build_options.add(bool, "enable_aaudio", app_config.aaudio);
     build_options.add(bool, "enable_opensl", app_config.opensl);
 
+    sdk.b.addModule(.{
+        .name = "android",
+        .source_file = .{ .path = "src/android-support.zig" },
+        .dependencies = &.{.{
+            .name = "build_options",
+            .module = build_options.getModule(),
+        }},
+    });
+
     const align_step = sdk.alignApk(unaligned_apk_file, apk_file);
 
     const java_dir = sdk.b.getInstallPath(.lib, "java");
@@ -793,25 +805,6 @@ pub fn compileAppLibrary(
 ) *std.build.LibExeObjStep {
     const ndk_root = sdk.b.pathFromRoot(sdk.folders.android_ndk_root);
 
-    const exe = sdk.b.addSharedLibrary(app_config.app_name, src_file, .unversioned);
-
-    exe.link_emit_relocs = true;
-    exe.link_eh_frame_hdr = true;
-    exe.force_pic = true;
-    exe.link_function_sections = true;
-    exe.bundle_compiler_rt = true;
-    exe.strip = (mode == .ReleaseSmall);
-    exe.export_table = true;
-
-    exe.defineCMacro("ANDROID", null);
-
-    exe.linkLibC();
-    for (app_config.libraries) |lib| {
-        exe.linkSystemLibraryName(lib);
-    }
-
-    exe.setBuildMode(mode);
-
     const TargetConfig = struct {
         lib_dir: []const u8,
         include_dir: []const u8,
@@ -865,9 +858,30 @@ pub fn compileAppLibrary(
     }) catch unreachable;
     const system_include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ include_dir, config.include_dir }) catch unreachable;
 
+    const exe = sdk.b.addSharedLibrary(.{
+        .name = app_config.app_name,
+        .root_source_file = .{ .path = src_file },
+        .target = config.target,
+        .optimize = mode,
+    });
+
+    exe.link_emit_relocs = true;
+    exe.link_eh_frame_hdr = true;
+    exe.force_pic = true;
+    exe.link_function_sections = true;
+    exe.bundle_compiler_rt = true;
+    exe.strip = (mode == .ReleaseSmall);
+    exe.export_table = true;
+
+    exe.defineCMacro("ANDROID", null);
+
+    exe.linkLibC();
+    for (app_config.libraries) |lib| {
+        exe.linkSystemLibraryName(lib);
+    }
+
     // exe.addIncludePath(include_dir);
 
-    exe.setTarget(config.target);
     exe.addLibraryPath(lib_dir);
 
     // exe.addIncludePath(include_dir);
@@ -1102,8 +1116,16 @@ const BuildOptionStep = struct {
             .file_content = std.ArrayList(u8).init(b.allocator),
             .package_file = std.build.GeneratedFile{ .step = &options.step },
         };
+        b.addModule(.{
+            .name = "build_options",
+            .source_file = .{ .generated = &options.package_file },
+        });
 
         return options;
+    }
+
+    pub fn getModule(self: *Self) *std.Build.Module {
+        return self.builder.modules.get("build_options") orelse unreachable;
     }
 
     pub fn getPackage(self: *Self, name: []const u8) std.build.Pkg {
