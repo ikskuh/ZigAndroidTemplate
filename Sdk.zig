@@ -537,8 +537,8 @@ pub fn createApp(
     }) catch unreachable;
 
     const unaligned_apk_file = sdk.b.pathJoin(&.{
-        sdk.b.build_root,
-        sdk.b.cache_root,
+        sdk.b.build_root.path.?,
+        sdk.b.cache_root.path.?,
         sdk.b.fmt("unaligned-{s}", .{std.fs.path.basename(apk_file)}),
     });
 
@@ -1287,7 +1287,7 @@ const CacheBuilder = struct {
                 self.builder.allocator,
                 "{s}/{s}/o/{}",
                 .{
-                    self.builder.cache_root,
+                    self.builder.cache_root.path.?,
                     subdir,
                     std.fmt.fmtSliceHexLower(&hash),
                 },
@@ -1297,7 +1297,7 @@ const CacheBuilder = struct {
                 self.builder.allocator,
                 "{s}/o/{}",
                 .{
-                    self.builder.cache_root,
+                    self.builder.cache_root.path.?,
                     std.fmt.fmtSliceHexLower(&hash),
                 },
             );
