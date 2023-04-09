@@ -640,11 +640,6 @@ pub fn createApp(
         "sign",
         "--ks", // keystore
         key_store.file,
-        "--ks-pass",
-        // pass,
-        // HACK: omit full path on Windows to avoid problems with spaces in the path
-        // if (builtin.os.tag == .windows) apk_file else sdk.b.pathFromRoot(apk_file),
-        // key_store.alias,
     });
     sign_step.step.dependOn(&align_step.step);
     {
@@ -653,6 +648,7 @@ pub fn createApp(
         sign_step.addFileSourceArg(apk_file);
     }
 
+    var last_step: *std.Build.Step = &make_unsigned_apk.step;
     inline for (std.meta.fields(AppTargetConfig)) |fld| {
         const target_name = @field(Target, fld.name);
         if (@field(targets, fld.name).?) {
@@ -673,9 +669,12 @@ pub fn createApp(
                 .x86 => "lib/x86/",
             };
 
-            const copy_to_zip = run_copy_to_zip(sdk, step.getOutputSource(), unaligned_apk_file, so_dir);
+            const target_filename = sdk.b.fmt("{s}lib{s}.so", .{ so_dir, app_config.app_name });
+
+            const copy_to_zip = run_copy_to_zip(sdk, step.getOutputSource(), unaligned_apk_file, target_filename);
             copy_to_zip.step.dependOn(&step.step);
-            copy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
+            copy_to_zip.step.dependOn(last_step); // enforces creation of APK before the execution
+            last_step = &copy_to_zip.step;
             align_step.step.dependOn(&copy_to_zip.step);
         }
     }
@@ -764,12 +763,12 @@ const CreateResourceDirectory = struct {
     }
 };
 
-fn run_copy_to_zip(sdk: *Sdk, input_file: std.build.FileSource, apk_file: std.build.FileSource, target_dir: []const u8) *std.Build.RunStep {
+fn run_copy_to_zip(sdk: *Sdk, input_file: std.build.FileSource, apk_file: std.build.FileSource, target_file: []const u8) *std.Build.RunStep {
     const run_cp = sdk.b.addRunArtifact(sdk.host_tools.zip_add);
 
     run_cp.addFileSourceArg(apk_file);
     run_cp.addFileSourceArg(input_file);
-    run_cp.addArg(target_dir);
+    run_cp.addArg(target_file);
 
     return run_cp;
 }
@@ -938,22 +937,6 @@ pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []cons
     });
     rmdir_cmd.step.dependOn(&repack_apk.step);
     return &rmdir_cmd.step;
-}
-
-pub fn signApk(sdk: Sdk, apk_file: []const u8, key_store: KeyStore) *Step {
-    const pass = sdk.b.fmt("pass:{s}", .{key_store.password});
-    const sign_apk = sdk.b.addSystemCommand(&[_][]const u8{
-        sdk.system_tools.apksigner,
-        "sign",
-        "--ks", // keystore
-        key_store.file,
-        "--ks-pass",
-        pass,
-        // HACK: omit full path on Windows to avoid problems with spaces in the path
-        if (builtin.os.tag == .windows) apk_file else sdk.b.pathFromRoot(apk_file),
-        // key_store.alias,
-    });
-    return &sign_apk.step;
 }
 
 pub fn installApp(sdk: Sdk, apk_file: std.build.FileSource) *Step {
