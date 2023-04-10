@@ -564,6 +564,9 @@ pub fn createApp(
         make_unsigned_apk.addArg(sdk.b.pathFromRoot(dir));
     }
 
+    const copy_to_zip_step = WriteToZip.init(sdk, unaligned_apk_file, unaligned_apk_name);
+    copy_to_zip_step.run_step.step.dependOn(&make_unsigned_apk.step);
+
     var libs = std.ArrayList(*std.build.LibExeObjStep).init(sdk.b.allocator);
     defer libs.deinit();
 
@@ -590,7 +593,7 @@ pub fn createApp(
         "-v", // verbose
         "4",
     });
-    align_step.addFileSourceArg(unaligned_apk_file);
+    align_step.addFileSourceArg(copy_to_zip_step.output_source);
     align_step.step.dependOn(&make_unsigned_apk.step);
     const apk_file = align_step.addOutputFileArg(apk_filename);
 
@@ -632,9 +635,9 @@ pub fn createApp(
         const dex_file = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ java_dir, "classes.dex" }) catch unreachable;
         // make_unsigned_apk.addArg("-I");
         // make_unsigned_apk.addArg(dex_file);
-        const copy_to_zip = run_copy_to_zip(sdk, .{ .path = dex_file }, unaligned_apk_file, "classes.dex");
-        copy_to_zip.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
-        align_step.step.dependOn(&copy_to_zip.step);
+        copy_to_zip_step.addFile(.{ .path = dex_file }, "classes.dex");
+        copy_to_zip_step.run_step.step.dependOn(&make_unsigned_apk.step); // enforces creation of APK before the execution
+        align_step.step.dependOn(&copy_to_zip_step.run_step.step);
     }
 
     // const sign_step = sdk.signApk(apk_filename, key_store);
@@ -651,7 +654,6 @@ pub fn createApp(
         sign_step.addFileSourceArg(apk_file);
     }
 
-    var last_step: *std.Build.Step = &make_unsigned_apk.step;
     inline for (std.meta.fields(AppTargetConfig)) |fld| {
         const target_name = @field(Target, fld.name);
         if (@field(targets, fld.name).?) {
@@ -674,11 +676,9 @@ pub fn createApp(
 
             const target_filename = sdk.b.fmt("{s}lib{s}.so", .{ so_dir, app_config.app_name });
 
-            const copy_to_zip = run_copy_to_zip(sdk, step.getOutputSource(), unaligned_apk_file, target_filename);
-            copy_to_zip.step.dependOn(&step.step);
-            copy_to_zip.step.dependOn(last_step); // enforces creation of APK before the execution
-            last_step = &copy_to_zip.step;
-            align_step.step.dependOn(&copy_to_zip.step);
+            copy_to_zip_step.addFile(step.getOutputSource(), target_filename);
+            copy_to_zip_step.run_step.step.dependOn(&step.step);
+            align_step.step.dependOn(&copy_to_zip_step.run_step.step);
         }
     }
 
@@ -775,6 +775,28 @@ fn run_copy_to_zip(sdk: *Sdk, input_file: std.build.FileSource, apk_file: std.bu
 
     return run_cp;
 }
+
+const WriteToZip = struct {
+    output_source: std.Build.FileSource,
+    run_step: *std.Build.RunStep,
+
+    pub fn init(sdk: *Sdk, zip_file: std.Build.FileSource, out_name: []const u8) WriteToZip {
+        const run_cp = sdk.b.addRunArtifact(sdk.host_tools.zip_add);
+
+        run_cp.addFileSourceArg(zip_file);
+        const output_source = run_cp.addOutputFileArg(out_name);
+
+        return WriteToZip{
+            .output_source = output_source,
+            .run_step = run_cp,
+        };
+    }
+
+    pub fn addFile(step: *const WriteToZip, input_file: std.Build.FileSource, target_file: []const u8) void {
+        step.run_step.addFileSourceArg(input_file);
+        step.run_step.addArg(target_file);
+    }
+};
 
 /// Compiles a single .so file for the given platform.
 /// Note that this function assumes your build script only uses a single `android_config`!
