@@ -68,10 +68,11 @@ pub fn build(b: *std.build.Builder) !void {
 
     // Replace by your app's main file.
     // Here this is some code to choose the example to run
-    const ExampleType = enum { egl, textview, invocationhandler };
+    const ExampleType = enum { egl, minimal, textview, invocationhandler };
     const example = b.option(ExampleType, "example", "Which example to run") orelse .egl;
     const src = switch (example) {
         .egl => "examples/egl/main.zig",
+        .minimal => "examples/minimal/main.zig",
         .textview => "examples/textview/main.zig",
         .invocationhandler => "examples/invocationhandler/main.zig",
     };
