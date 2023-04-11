@@ -6,13 +6,17 @@ This repository contains multiple examples of creating a minimal Android app in 
 
 ## Examples
 
-There are 3 different examples. The examples have no dependencies on C code except for the android libraries, so they can be considered pure Zig apps.
+There are 4 different examples. The examples have no dependencies on C code except for the android libraries, so they can be considered pure Zig apps.
 
-To select which example to build and run, pass the example flag (e.g. `-Dexample=egl`). Valid values for the example flag are `egl`, `textview`, and `invocationhandler`.
+To select which example to build and run, pass the example flag (e.g. `-Dexample=egl`). Valid values for the example flag are `egl`, `minimal`, `textview`, and `invocationhandler`.
 
 We're running a CI that will verify the build for Windows, macOS and Linux:
 
 [![CI](https://github.com/MasterQ32/ZigAndroidTemplate/actions/workflows/main-ci.yml/badge.svg)](https://github.com/MasterQ32/ZigAndroidTemplate/actions/workflows/main-ci.yml)
+
+### Minimal
+
+`examples/minimal` includes just enough code to get the app running.
 
 ### EGL
 
