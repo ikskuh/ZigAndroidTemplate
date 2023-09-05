@@ -506,7 +506,7 @@ pub fn createApp(
         .content = write_xml_step.getFileSource("strings.xml").?,
     });
 
-    const sdk_version_int = @enumToInt(app_config.target_version);
+    const sdk_version_int = @intFromEnum(app_config.target_version);
 
     if (sdk_version_int < 16) @panic("Minimum supported sdk version is 16.");
 
@@ -848,7 +848,7 @@ pub fn compileAppLibrary(
         ndk_root,
         toolchainHostTag(),
         config.lib_dir,
-        @enumToInt(app_config.target_version),
+        @intFromEnum(app_config.target_version),
     });
 
     const include_dir = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{
@@ -904,7 +904,7 @@ pub fn compileAppLibrary(
 }
 
 fn createLibCFile(sdk: *const Sdk, version: AndroidVersion, folder_name: []const u8, include_dir: []const u8, sys_include_dir: []const u8, crt_dir: []const u8) !std.build.FileSource {
-    const fname = sdk.b.fmt("android-{d}-{s}.conf", .{ @enumToInt(version), folder_name });
+    const fname = sdk.b.fmt("android-{d}-{s}.conf", .{ @intFromEnum(version), folder_name });
 
     var contents = std.ArrayList(u8).init(sdk.b.allocator);
     errdefer contents.deinit();

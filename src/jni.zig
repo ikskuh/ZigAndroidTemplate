@@ -15,7 +15,7 @@ pub const JNI = opaque {
     }
 
     pub inline fn invokeJniNoException(jni: *JNI, comptime function: @TypeOf(.literal), args: anytype) JniReturnType(function) {
-        const env = @ptrCast(*android.JNIEnv, @alignCast(@alignOf(*android.JNIEnv), jni));
+        const env = @as(*android.JNIEnv, @ptrCast(@alignCast(@alignOf(*android.JNIEnv), jni)));
         return @call(
             .auto,
             @field(env.*, @tagName(function)),
@@ -135,7 +135,7 @@ pub const JNI = opaque {
         pub fn init(jni: *JNI, string: android.jstring) Error!String {
             const len = try jni.invokeJni(.GetStringLength, .{string});
             const ptr = try jni.invokeJni(.GetStringChars, .{ string, null });
-            const slice = ptr[0..@intCast(usize, len)];
+            const slice = ptr[0..@as(usize, @intCast(len))];
             return String{
                 .jstring = string,
                 .slice = slice,
