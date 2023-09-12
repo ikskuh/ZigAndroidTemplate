@@ -24,17 +24,19 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
     // Check for a user config file.
     if (std.fs.cwd().openFile(config_path, .{})) |file| {
         defer file.close();
-        const bytes = file.readToEndAlloc(b.allocator, 1 * 1000 * 1000) catch |err| {
-            print("Unexpected error reading {s}: {s}\n", .{ config_path, @errorName(err) });
-            return err;
-        };
-        var stream = std.json.TokenStream.init(bytes);
-        if (std.json.parse(UserConfig, &stream, .{ .allocator = b.allocator })) |conf| {
-            config = conf;
-        } else |err| {
-            print("Could not parse {s} ({s}).\n", .{ config_path, @errorName(err) });
-            return err;
-        }
+        // @panic("Config file not supported yet");
+        std.debug.print("Config file: TODO\n", .{});
+        // const bytes = file.readToEndAlloc(b.allocator, 1 * 1000 * 1000) catch |err| {
+        //     print("Unexpected error reading {s}: {s}\n", .{ config_path, @errorName(err) });
+        //     return err;
+        // };
+        // var stream = std.json.TokenStream.init(bytes);
+        // if (std.json.parse(UserConfig, &stream, .{ .allocator = b.allocator })) |conf| {
+        //     config = conf;
+        // } else |err| {
+        //     print("Could not parse {s} ({s}).\n", .{ config_path, @errorName(err) });
+        //     return err;
+        // }
     } else |err| switch (err) {
         error.FileNotFound => {
             config_dirty = true;
@@ -99,10 +101,10 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         const LSTATUS = u32;
         const DWORD = u32;
 
-        // const HKEY_CLASSES_ROOT = @intToPtr(HKEY, 0x80000000);
-        const HKEY_CURRENT_USER = @intToPtr(HKEY, 0x80000001);
-        const HKEY_LOCAL_MACHINE = @intToPtr(HKEY, 0x80000002);
-        // const HKEY_USERS = @intToPtr(HKEY, 0x80000003);
+        // const HKEY_CLASSES_ROOT: HKEY= @ptrFromInt(0x80000000);
+        const HKEY_CURRENT_USER: HKEY = @ptrFromInt(0x80000001);
+        const HKEY_LOCAL_MACHINE: HKEY = @ptrFromInt(0x80000002);
+        // const HKEY_USERS: HKEY= @ptrFromInt(0x80000003);
 
         // const RRF_RT_ANY: DWORD = 0xFFFF;
         // const RRF_RT_REG_BINARY: DWORD = 0x08;
@@ -142,7 +144,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
 
                 // get the data
                 const buffer = allocator.alloc(u8, len) catch unreachable;
-                len = @intCast(DWORD, buffer.len);
+                len = @as(DWORD, @intCast(buffer.len));
                 res = RegGetValueA(key, null, value, RRF_RT_REG_SZ, null, buffer.ptr, &len);
                 if (res == ERROR_SUCCESS) {
                     for (buffer[0..len], 0..) |c, i| {
