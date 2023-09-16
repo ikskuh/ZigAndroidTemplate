@@ -372,19 +372,19 @@ pub const AndroidApp = struct {
         // Audio
         self.simple_synth = SimpleSynth.init();
 
-        try audio.init();
+        // var output_stream = try audio.getOutputStream(self.allocator, .{
+        //     .sample_format = .Int16,
+        //     .callback = SimpleSynth.audioCallback,
+        //     .user_data = &self.simple_synth,
+        // });
+        // _ = output_stream;
 
-        var output_stream = try audio.getOutputStream(self.allocator, .{
-            .sample_format = .Int16,
-            .callback = SimpleSynth.audioCallback,
-            .user_data = &self.simple_synth,
-        });
-        defer {
-            output_stream.stop();
-            output_stream.deinit();
-        }
+        // defer {
+        //     output_stream.stop();
+        //     output_stream.deinit();
+        // }
 
-        try output_stream.start();
+        // try output_stream.start();
 
         // Graphics
         const GLuint = c.GLuint;
@@ -414,12 +414,11 @@ pub const AndroidApp = struct {
         };
 
         while (@atomicLoad(bool, &self.running, .SeqCst)) {
-
             // Input process
             {
                 // we lock the handle of our input so we don't have a race condition
-                self.input_lock.lock();
-                defer self.input_lock.unlock();
+                // self.input_lock.lock();
+                // defer self.input_lock.unlock();
                 if (self.input) |input| {
                     var event: ?*android.AInputEvent = undefined;
                     while (android.AInputQueue_getEvent(input, &event) >= 0) {
@@ -893,7 +892,7 @@ const SimpleSynth = struct {
     }
 
     fn audioCallback(stream: audio.StreamLayout, user_data: *anyopaque) void {
-        var synth = @as(*SimpleSynth, @ptrCast(@alignCast(@alignOf(SimpleSynth), user_data)));
+        var synth = @as(*SimpleSynth, @ptrCast(@alignCast(user_data)));
         std.debug.assert(stream.buffer == .Int16);
 
         for (&synth.oscillators) |*osc| {
