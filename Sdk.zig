@@ -94,12 +94,15 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
             .name = "zip_add",
             .root_source_file = .{ .path = sdkRoot() ++ "/tools/zip_add.zig" },
         });
-        zip_add.addCSourceFile(sdkRoot() ++ "/vendor/kuba-zip/zip.c", &[_][]const u8{
-            "-std=c99",
-            "-fno-sanitize=undefined",
-            "-D_POSIX_C_SOURCE=200112L",
+        zip_add.addCSourceFile(.{
+            .file = .{ .path = sdkRoot() ++ "/vendor/kuba-zip/zip.c" },
+            .flags = &[_][]const u8{
+                "-std=c99",
+                "-fno-sanitize=undefined",
+                "-D_POSIX_C_SOURCE=200112L",
+            },
         });
-        zip_add.addIncludePath(sdkRoot() ++ "/vendor/kuba-zip");
+        zip_add.addIncludePath(.{ .path = sdkRoot() ++ "/vendor/kuba-zip" });
         zip_add.linkLibC();
 
         break :blk HostTools{
@@ -505,7 +508,7 @@ pub fn createApp(
     }
     resource_dir_step.add(Resource{
         .path = "values/strings.xml",
-        .content = write_xml_step.getFileSource("strings.xml").?,
+        .content = write_xml_step.files.items[0].getPath(), // strings.xml
     });
 
     const sdk_version_int = @intFromEnum(app_config.target_version);
@@ -551,7 +554,7 @@ pub fn createApp(
     const unaligned_apk_file = make_unsigned_apk.addOutputFileArg(unaligned_apk_name);
 
     make_unsigned_apk.addArg("-M"); // specify full path to AndroidManifest.xml to include in zip
-    make_unsigned_apk.addFileSourceArg(manifest_step.getFileSource("AndroidManifest.xml").?);
+    make_unsigned_apk.addFileSourceArg(manifest_step.files.items[0].getPath());
 
     make_unsigned_apk.addArg("-S"); // directory in which to find resources.  Multiple directories will be scanned and the first match found (left to right) will take precedence
     make_unsigned_apk.addDirectorySourceArg(resource_dir_step.getOutputDirectory());
@@ -614,7 +617,6 @@ pub fn createApp(
                 sdk.system_tools.javac,
                 "-cp",
                 root_jar,
-                "-d",
                 java_dir,
             });
             javac_cmd.addFileSourceArg(std.build.FileSource.relative(java_file));
@@ -889,7 +891,7 @@ pub fn compileAppLibrary(
 
     // exe.addIncludePath(include_dir);
 
-    exe.addLibraryPath(lib_dir);
+    exe.addLibraryPath(.{ .path = lib_dir });
 
     // exe.addIncludePath(include_dir);
     // exe.addIncludePath(system_include_dir);
@@ -928,7 +930,7 @@ fn createLibCFile(sdk: *const Sdk, version: AndroidVersion, folder_name: []const
     try writer.writeAll("gcc_dir=\n");
 
     const step = sdk.b.addWriteFile(fname, contents.items);
-    return step.getFileSource(fname) orelse unreachable;
+    return step.files.items[0].getPath();
 }
 
 pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []const u8) *Step {
@@ -1152,22 +1154,6 @@ const BuildOptionStep = struct {
                     out.writeAll("null;\n") catch unreachable;
                 }
                 return;
-            },
-            std.builtin.Version => {
-                out.print(
-                    \\pub const {}: @import("std").builtin.Version = .{{
-                    \\    .major = {d},
-                    \\    .minor = {d},
-                    \\    .patch = {d},
-                    \\}};
-                    \\
-                , .{
-                    std.zig.fmtId(name),
-
-                    value.major,
-                    value.minor,
-                    value.patch,
-                }) catch unreachable;
             },
             std.SemanticVersion => {
                 out.print(
