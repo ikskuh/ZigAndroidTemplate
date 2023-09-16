@@ -32,7 +32,7 @@ jobs:
         run: |
           sdkmanager --install "platforms;android-21"
           sdkmanager --install "build-tools;33.0.0"
-          sdkmanager --install "ndk;25.1.8937393"
+          sdkmanager --install "ndk;24.0.8215888"
 
       - name: Build the project
         run: |

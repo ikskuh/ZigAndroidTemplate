@@ -72,7 +72,7 @@ sdkmanager --install "platforms;android-21"
 # remember to set it like `zig build -Dandroid=android99`
 
 sdkmanager --install "build-tools;33.0.1"
-sdkmanager --install "ndk;25.1.8937393"
+sdkmanager --install "ndk;24.0.8215888"
 zig build keystore install run
 ```
 

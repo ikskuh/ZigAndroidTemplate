@@ -18,11 +18,13 @@ fn sdkRoot() *const [sdkRootIntern().len]u8 {
 
 // linux-x86_64
 pub fn toolchainHostTag() []const u8 {
-    comptime {
-        const os = builtin.os.tag;
-        const arch = builtin.cpu.arch;
-        return @tagName(os) ++ "-" ++ @tagName(arch);
+    const os = builtin.os.tag;
+    const arch = builtin.cpu.arch;
+    if (os == .macos and arch == .aarch64) {
+        // Android NDK does not support Apple Silicon, and must be ran with Rosetta, JFC!
+        return "darwin-x86_64";
     }
+    return @tagName(os) ++ "-" ++ @tagName(arch);
 }
 
 /// This file encodes a instance of an Android SDK interface.
@@ -118,7 +120,7 @@ pub fn init(b: *Builder, user_config: ?UserConfig, toolchains: ToolchainVersions
 
 pub const ToolchainVersions = struct {
     build_tools_version: []const u8 = "33.0.1",
-    ndk_version: []const u8 = "25.1.8937393",
+    ndk_version: []const u8 = "24.0.8215888",
 };
 
 pub const AndroidVersion = enum(u16) {
