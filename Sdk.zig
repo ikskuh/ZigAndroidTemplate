@@ -617,6 +617,7 @@ pub fn createApp(
                 sdk.system_tools.javac,
                 "-cp",
                 root_jar,
+                "-d",
                 java_dir,
             });
             javac_cmd.addFileSourceArg(std.build.FileSource.relative(java_file));
@@ -969,7 +970,7 @@ pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []cons
 }
 
 pub fn installApp(sdk: Sdk, apk_file: std.build.FileSource) *Step {
-    const step = sdk.b.addSystemCommand(&[_][]const u8{ sdk.system_tools.adb, "install" });
+    const step = sdk.b.addSystemCommand(&[_][]const u8{ sdk.system_tools.adb, "-d", "install" });
     step.addFileSourceArg(apk_file);
     return &step.step;
 }
@@ -978,6 +979,7 @@ pub fn startApp(sdk: Sdk, package_name: []const u8) *Step {
     const command: []const []const u8 = switch (sdk.launch_using) {
         .am => &.{
             sdk.system_tools.adb,
+            "-d",
             "shell",
             "am",
             "start",
@@ -986,6 +988,7 @@ pub fn startApp(sdk: Sdk, package_name: []const u8) *Step {
         },
         .monkey => &.{
             sdk.system_tools.adb,
+            "-d",
             "shell",
             "monkey",
             "-p",
