@@ -28,13 +28,15 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
             print("Unexpected error reading {s}: {s}\n", .{ config_path, @errorName(err) });
             return err;
         };
-        var stream = std.json.TokenStream.init(bytes);
-        if (std.json.parse(UserConfig, &stream, .{ .allocator = b.allocator })) |conf| {
-            config = conf;
-        } else |err| {
-            print("Could not parse {s} ({s}).\n", .{ config_path, @errorName(err) });
+
+        var scanner = std.json.Scanner.initCompleteInput(b.allocator, bytes);
+        var diagnostics = std.json.Diagnostics{};
+        scanner.enableDiagnostics(&diagnostics);
+        var parsed = std.json.parseFromTokenSource(UserConfig, b.allocator, &scanner, .{}) catch |err| {
+            std.debug.print("Could not parse {s}: line,col: {},{}\n", .{ config_path, diagnostics.getLine(), diagnostics.getColumn() });
             return err;
-        }
+        };
+        config = parsed.value;
     } else |err| switch (err) {
         error.FileNotFound => {
             config_dirty = true;

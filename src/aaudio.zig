@@ -36,10 +36,10 @@ pub const AAudio = struct {
         num_frames: i32,
     ) callconv(.C) c.aaudio_data_callback_result_t {
         _ = stream;
-        const output_stream = @as(*OutputStream, @ptrCast(@alignCast(@alignOf(OutputStream), user_data.?)));
+        const output_stream = @as(*OutputStream, @ptrCast(@alignCast(user_data.?)));
         // TODO:
-        // const audio_slice = @ptrCast([*]f32, @alignCast(@alignOf(f32), audio_data.?))[0..@intCast(usize, num_frames)];
-        const audio_slice = @as([*]i16, @ptrCast(@alignCast(@alignOf(i16), audio_data.?)))[0..@as(usize, @intCast(num_frames))];
+        // const audio_slice = @ptrCast([*]f32, @alignCast(audio_data.?))[0..@intCast(usize, num_frames)];
+        const audio_slice = @as([*]i16, @ptrCast(@alignCast(audio_data.?)))[0..@as(usize, @intCast(num_frames))];
 
         for (audio_slice) |*frame| {
             frame.* = 0;
@@ -64,7 +64,7 @@ pub const AAudio = struct {
         _ = stream;
         audio_log.err("AAudio Stream error! {}", .{err});
         if (err == c.AAUDIO_ERROR_DISCONNECTED) {
-            const output_stream = @as(*OutputStream, @ptrCast(@alignCast(@alignOf(OutputStream), user_data.?)));
+            const output_stream = @as(*OutputStream, @ptrCast(@alignCast(user_data.?)));
             _ = std.Thread.spawn(.{}, OutputStream.deinit, .{output_stream}) catch @panic("Error starting thread for AAudioOutputStream");
         }
     }

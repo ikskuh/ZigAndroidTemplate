@@ -92,7 +92,7 @@ pub const OpenSL = struct {
     };
 
     pub fn bufferQueueCallback(queue_itf: c.SLAndroidSimpleBufferQueueItf, user_data: ?*anyopaque) callconv(.C) void {
-        var output_stream = @as(*OutputStream, @ptrCast(@alignCast(@alignOf(OutputStream), user_data)));
+        var output_stream = @as(*OutputStream, @ptrCast(@alignCast(user_data)));
 
         // Lock the mutex to prevent race conditions
         output_stream.mutex.lock();

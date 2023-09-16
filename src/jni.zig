@@ -15,7 +15,7 @@ pub const JNI = opaque {
     }
 
     pub inline fn invokeJniNoException(jni: *JNI, comptime function: @TypeOf(.literal), args: anytype) JniReturnType(function) {
-        const env = @as(*android.JNIEnv, @ptrCast(@alignCast(@alignOf(*android.JNIEnv), jni)));
+        const env = @as(*android.JNIEnv, @ptrCast(@alignCast(jni)));
         return @call(
             .auto,
             @field(env.*, @tagName(function)),
