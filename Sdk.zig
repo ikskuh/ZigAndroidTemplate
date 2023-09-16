@@ -205,12 +205,6 @@ pub const AppConfig = struct {
     /// This is usually relevant for games.
     fullscreen: bool = false,
 
-    /// If true, the app will be compiled with the AAudio library.
-    aaudio: bool = false,
-
-    /// If true, the app will be compiled with the OpenSL library
-    opensl: bool = true,
-
     /// One or more asset directories. Each directory will be added into the app assets.
     asset_directories: []const []const u8 = &[_][]const u8{},
 
@@ -579,8 +573,6 @@ pub fn createApp(
     build_options.add([]const u8, "app_name", app_config.app_name);
     build_options.add(u16, "android_sdk_version", sdk_version_int);
     build_options.add(bool, "fullscreen", app_config.fullscreen);
-    build_options.add(bool, "enable_aaudio", app_config.aaudio);
-    build_options.add(bool, "enable_opensl", app_config.opensl);
 
     const android_module = sdk.b.addModule("android", .{
         .source_file = .{ .path = "src/android-support.zig" },

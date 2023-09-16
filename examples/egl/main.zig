@@ -372,19 +372,18 @@ pub const AndroidApp = struct {
         // Audio
         self.simple_synth = SimpleSynth.init();
 
-        // var output_stream = try audio.getOutputStream(self.allocator, .{
-        //     .sample_format = .Int16,
-        //     .callback = SimpleSynth.audioCallback,
-        //     .user_data = &self.simple_synth,
-        // });
-        // _ = output_stream;
+        var output_stream = try audio.getOutputStream(self.allocator, .{
+            .sample_format = .Int16,
+            .callback = SimpleSynth.audioCallback,
+            .user_data = &self.simple_synth,
+        });
 
-        // defer {
-        //     output_stream.stop();
-        //     output_stream.deinit();
-        // }
+        defer {
+            output_stream.stop();
+            output_stream.deinit();
+        }
 
-        // try output_stream.start();
+        try output_stream.start();
 
         // Graphics
         const GLuint = c.GLuint;

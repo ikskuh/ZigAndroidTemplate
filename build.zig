@@ -9,9 +9,7 @@ pub fn build(b: *std.build.Builder) !void {
     // Default-initialize SDK
     const sdk = Sdk.init(b, null, .{});
     const mode = b.standardOptimizeOption(.{});
-    const android_version = b.option(Sdk.AndroidVersion, "android", "Select the android version, default is 'android5'") orelse .android5;
-    const aaudio = b.option(bool, "aaudio", "Compile with support for AAudio, default is 'false'") orelse false;
-    const opensl = b.option(bool, "opensl", "Compile with support for OpenSL ES, default is 'true'") orelse true;
+    const android_version = b.option(Sdk.AndroidVersion, "android", "Select the android version, default is 'android9'") orelse .android9;
 
     // Provide some KeyStore structure so we can sign our app.
     // Recommendation: Don't hardcore your password here, everyone can read it.
@@ -27,9 +25,7 @@ pub fn build(b: *std.build.Builder) !void {
     try libraries.append("EGL");
     try libraries.append("android");
     try libraries.append("log");
-
-    if (opensl) try libraries.append("OpenSLES");
-    if (aaudio) try libraries.append("aaudio");
+    try libraries.append("aaudio");
 
     // This is a configuration for your application.
     // Android requires several configurations to be done, this is a typical config
@@ -51,10 +47,6 @@ pub fn build(b: *std.build.Builder) !void {
         .resources = &[_]Sdk.Resource{
             .{ .path = "mipmap/icon.png", .content = .{ .path = "examples/icon.png" } },
         },
-
-        .aaudio = aaudio,
-
-        .opensl = opensl,
 
         // This is a list of android permissions. Check out the documentation to figure out which you need.
         .permissions = &[_][]const u8{

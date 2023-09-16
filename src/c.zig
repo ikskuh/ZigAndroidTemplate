@@ -6,11 +6,5 @@ pub usingnamespace @cImport({
     @cInclude("GLES2/gl2ext.h");
     // @cInclude("unwind.h");
     // @cInclude("dlfcn.h");
-    if (build_options.enable_aaudio) {
-        @cInclude("aaudio/AAudio.h");
-    }
-    if (build_options.enable_opensl) {
-        @cInclude("SLES/OpenSLES.h");
-        @cInclude("SLES/OpenSLES_Android.h");
-    }
+    @cInclude("aaudio/AAudio.h");
 });

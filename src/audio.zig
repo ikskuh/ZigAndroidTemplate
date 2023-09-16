@@ -5,10 +5,7 @@ const android = @import("c.zig");
 
 const audio_log = std.log.scoped(.audio);
 
-const Dummy = @import("dummy.zig").Dummy;
-
-const OpenSL = if (build_options.enable_opensl) @import("opensl.zig").OpenSL else Dummy;
-const AAudio = if (build_options.enable_aaudio) @import("aaudio.zig").AAudio else Dummy;
+const AAudio = @import("aaudio.zig").AAudio;
 
 pub fn midiToFreq(note: usize) f64 {
     return std.math.pow(f64, 2, (@as(f64, @floatFromInt(note)) - 49) / 12) * 440;
@@ -51,44 +48,6 @@ pub const OutputStreamConfig = struct {
     user_data: *anyopaque,
 };
 
-pub fn init() !void {
-    if (build_options.enable_opensl) {
-        try OpenSL.init();
-    }
+pub fn getOutputStream(allocator: std.mem.Allocator, config: OutputStreamConfig) !*AAudio.OutputStream {
+    return try AAudio.getOutputStream(allocator, config);
 }
-
-pub fn getOutputStream(allocator: std.mem.Allocator, config: OutputStreamConfig) !OutputStream {
-    if (build_options.enable_aaudio) {
-        return .{ .AAudio = try AAudio.getOutputStream(allocator, config) };
-    }
-    if (build_options.enable_opensl) {
-        return .{ .OpenSL = try OpenSL.getOutputStream(allocator, config) };
-    }
-    return error.NoBackendsAvailable;
-}
-
-pub const OutputStream = union(enum) {
-    OpenSL: *OpenSL.OutputStream,
-    AAudio: *AAudio.OutputStream,
-
-    pub fn stop(output_stream: @This()) void {
-        switch (output_stream) {
-            .OpenSL => |opensl| opensl.stop(),
-            .AAudio => |aaudio| aaudio.stop(),
-        }
-    }
-
-    pub fn deinit(output_stream: @This()) void {
-        switch (output_stream) {
-            .OpenSL => |opensl| opensl.deinit(),
-            .AAudio => |aaudio| aaudio.deinit(),
-        }
-    }
-
-    pub fn start(output_stream: @This()) !void {
-        switch (output_stream) {
-            .OpenSL => |opensl| try opensl.start(),
-            .AAudio => |aaudio| try aaudio.start(),
-        }
-    }
-};
