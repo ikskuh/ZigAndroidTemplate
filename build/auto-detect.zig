@@ -26,17 +26,16 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         defer file.close();
         // @panic("Config file not supported yet");
         std.debug.print("Config file: TODO\n", .{});
-        // const bytes = file.readToEndAlloc(b.allocator, 1 * 1000 * 1000) catch |err| {
-        //     print("Unexpected error reading {s}: {s}\n", .{ config_path, @errorName(err) });
-        //     return err;
-        // };
-        // var stream = std.json.TokenStream.init(bytes);
-        // if (std.json.parse(UserConfig, &stream, .{ .allocator = b.allocator })) |conf| {
-        //     config = conf;
-        // } else |err| {
-        //     print("Could not parse {s} ({s}).\n", .{ config_path, @errorName(err) });
-        //     return err;
-        // }
+        const bytes = file.readToEndAlloc(b.allocator, 1 * 1000 * 1000) catch |err| {
+            print("Unexpected error reading {s}: {s}\n", .{ config_path, @errorName(err) });
+            return err;
+        };
+        if (std.json.parseFromSlice(UserConfig, b.allocator, bytes, .{})) |conf| {
+            config = conf.value;
+        } else |err| {
+            print("Could not parse {s} ({s}).\n", .{ config_path, @errorName(err) });
+            return err;
+        }
     } else |err| switch (err) {
         error.FileNotFound => {
             config_dirty = true;
