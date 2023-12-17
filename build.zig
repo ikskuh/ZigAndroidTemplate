@@ -11,7 +11,7 @@ pub fn build(b: *std.build.Builder) !void {
     const mode = b.standardOptimizeOption(.{});
     const android_version = b.option(Sdk.AndroidVersion, "android", "Select the android version, default is 'android5'") orelse .android5;
     const aaudio = b.option(bool, "aaudio", "Compile with support for AAudio, default is 'false'") orelse false;
-    const opensl = b.option(bool, "opensl", "Compile with support for OpenSL ES, default is 'false'") orelse false;
+    const opensl = b.option(bool, "opensl", "Compile with support for OpenSL ES, default is 'true'") orelse true;
 
     // Provide some KeyStore structure so we can sign our app.
     // Recommendation: Don't hardcore your password here, everyone can read it.

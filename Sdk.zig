@@ -595,9 +595,6 @@ pub fn createApp(
     align_step.step.dependOn(&make_unsigned_apk.step);
     const apk_file = align_step.addOutputFileArg(apk_filename);
 
-    const apk_install = sdk.b.addInstallBinFile(apk_file, apk_filename);
-    sdk.b.getInstallStep().dependOn(&apk_install.step);
-
     const java_dir = sdk.b.getInstallPath(.lib, "java");
     if (java_files_opt) |java_files| {
         const d8_cmd_builder = sdk.b.addSystemCommand(&[_][]const u8{sdk.system_tools.d8});
@@ -656,6 +653,11 @@ pub fn createApp(
         sign_step.addArgs(&.{ "--ks-pass", pass });
         sign_step.addFileArg(apk_file);
     }
+
+    const apk_install = sdk.b.addInstallBinFile(apk_file, apk_filename);
+    sdk.b.getInstallStep().dependOn(&apk_install.step);
+    // only install after singing the apk
+    apk_install.step.dependOn(&sign_step.step);
 
     inline for (std.meta.fields(AppTargetConfig)) |fld| {
         const target_name = @field(Target, fld.name);
