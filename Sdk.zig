@@ -501,8 +501,7 @@ pub fn createApp(
     }
     resource_dir_step.add(Resource{
         .path = "values/strings.xml",
-        // .content = write_xml_step.getFileSource("strings.xml").?,
-        .content = write_xml_step.addCopyFile(.{ .path = "strings.xml" }, ""),
+        .content = write_xml_step.files.items[0].getPath(),
     });
 
     const sdk_version_int = @intFromEnum(app_config.target_version);
@@ -548,11 +547,10 @@ pub fn createApp(
     const unaligned_apk_file = make_unsigned_apk.addOutputFileArg(unaligned_apk_name);
 
     make_unsigned_apk.addArg("-M"); // specify full path to AndroidManifest.xml to include in zip
-    // make_unsigned_apk.addFileSourceArg(manifest_step.getFileSource("AndroidManifest.xml").?);
-    make_unsigned_apk.addFileSourceArg(manifest_step.addCopyFile(.{ .path = "AndroidManifest.xml" }, ""));
+    make_unsigned_apk.addFileArg(manifest_step.files.items[0].getPath());
 
     make_unsigned_apk.addArg("-S"); // directory in which to find resources.  Multiple directories will be scanned and the first match found (left to right) will take precedence
-    make_unsigned_apk.addDirectorySourceArg(resource_dir_step.getOutputDirectory());
+    make_unsigned_apk.addDirectoryArg(resource_dir_step.getOutputDirectory());
 
     make_unsigned_apk.addArgs(&[_][]const u8{
         "-v",
@@ -593,7 +591,7 @@ pub fn createApp(
         "-v", // verbose
         "4",
     });
-    align_step.addFileSourceArg(copy_to_zip_step.output_source);
+    align_step.addFileArg(copy_to_zip_step.output_source);
     align_step.step.dependOn(&make_unsigned_apk.step);
     const apk_file = align_step.addOutputFileArg(apk_filename);
 
@@ -615,13 +613,13 @@ pub fn createApp(
                 "-d",
                 java_dir,
             });
-            javac_cmd.addFileSourceArg(std.build.FileSource.relative(java_file));
+            javac_cmd.addFileArg(std.build.FileSource.relative(java_file));
 
             const name = std.fs.path.stem(java_file);
             const name_ext = sdk.b.fmt("{s}.class", .{name});
             const class_file = std.fs.path.resolve(sdk.b.allocator, &[_][]const u8{ java_dir, name_ext }) catch unreachable;
 
-            d8_cmd_builder.addFileSourceArg(.{ .path = class_file });
+            d8_cmd_builder.addFileArg(.{ .path = class_file });
             d8_cmd_builder.step.dependOn(&javac_cmd.step);
         }
 
@@ -640,6 +638,11 @@ pub fn createApp(
         align_step.step.dependOn(&copy_to_zip_step.run_step.step);
     }
 
+    if (!auto_detect.fileExists(key_store.file)) {
+        // sadly we lack a FailStep
+        std.log.err("missing keystore file at `{s}`", .{key_store.file});
+    }
+
     // const sign_step = sdk.signApk(apk_filename, key_store);
     const sign_step = sdk.b.addSystemCommand(&[_][]const u8{
         sdk.system_tools.apksigner,
@@ -651,7 +654,7 @@ pub fn createApp(
     {
         const pass = sdk.b.fmt("pass:{s}", .{key_store.password});
         sign_step.addArgs(&.{ "--ks-pass", pass });
-        sign_step.addFileSourceArg(apk_file);
+        sign_step.addFileArg(apk_file);
     }
 
     inline for (std.meta.fields(AppTargetConfig)) |fld| {
@@ -678,6 +681,7 @@ pub fn createApp(
 
             copy_to_zip_step.addFile(step.getOutputSource(), target_filename);
             copy_to_zip_step.run_step.step.dependOn(&step.step);
+            // why this is inside the for loop
             align_step.step.dependOn(&copy_to_zip_step.run_step.step);
         }
     }
@@ -769,8 +773,8 @@ const CreateResourceDirectory = struct {
 fn run_copy_to_zip(sdk: *Sdk, input_file: std.build.FileSource, apk_file: std.build.FileSource, target_file: []const u8) *std.Build.RunStep {
     const run_cp = sdk.b.addRunArtifact(sdk.host_tools.zip_add);
 
-    run_cp.addFileSourceArg(apk_file);
-    run_cp.addFileSourceArg(input_file);
+    run_cp.addFileArg(apk_file);
+    run_cp.addFileArg(input_file);
     run_cp.addArg(target_file);
 
     return run_cp;
@@ -783,7 +787,7 @@ const WriteToZip = struct {
     pub fn init(sdk: *Sdk, zip_file: std.Build.FileSource, out_name: []const u8) WriteToZip {
         const run_cp = sdk.b.addRunArtifact(sdk.host_tools.zip_add);
 
-        run_cp.addFileSourceArg(zip_file);
+        run_cp.addFileArg(zip_file);
         const output_source = run_cp.addOutputFileArg(out_name);
 
         return WriteToZip{
@@ -793,7 +797,7 @@ const WriteToZip = struct {
     }
 
     pub fn addFile(step: *const WriteToZip, input_file: std.Build.FileSource, target_file: []const u8) void {
-        step.run_step.addFileSourceArg(input_file);
+        step.run_step.addFileArg(input_file);
         step.run_step.addArg(target_file);
     }
 };
@@ -927,7 +931,7 @@ fn createLibCFile(sdk: *const Sdk, version: AndroidVersion, folder_name: []const
 
     const step = sdk.b.addWriteFile(fname, contents.items);
     // return step.getFileSource(fname) orelse unreachable;
-    return step.addCopyFile(.{ .path = fname }, "");
+    return step.files.items[0].getPath();
 }
 
 pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []const u8) *Step {
@@ -967,7 +971,7 @@ pub fn compressApk(sdk: Sdk, input_apk_file: []const u8, output_apk_file: []cons
 
 pub fn installApp(sdk: Sdk, apk_file: std.build.FileSource) *Step {
     const step = sdk.b.addSystemCommand(&[_][]const u8{ sdk.system_tools.adb, "install" });
-    step.addFileSourceArg(apk_file);
+    step.addFileArg(apk_file);
     return &step.step;
 }
 
@@ -998,18 +1002,17 @@ pub fn startApp(sdk: Sdk, package_name: []const u8) *Step {
 pub const KeyConfig = struct {
     pub const Algorithm = enum { RSA };
     key_algorithm: Algorithm = .RSA,
-    key_size: u32 = 2048, // bits
+    key_size: u32 = 4096, // bits
     validity: u32 = 10_000, // days
-    distinguished_name: []const u8 = "CN=example.com, OU=ID, O=Example, L=Doe, S=John, C=GB",
+    distinguished_name: []const u8 = "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=Unknown",
 };
 /// A build step that initializes a new key store from the given configuration.
 /// `android_config.key_store` must be non-`null` as it is used to initialize the key store.
 pub fn initKeystore(sdk: Sdk, key_store: KeyStore, key_config: KeyConfig) *Step {
     if (auto_detect.fileExists(key_store.file)) {
-        std.log.warn("keystore already exists: {s}", .{key_store.file});
         return sdk.b.step("init_keystore_noop", "Do nothing, since key exists");
     } else {
-        const step = sdk.b.addSystemCommand(&[_][]const u8{
+        const args = &[_][]const u8{
             sdk.system_tools.keytool,
             "-genkey",
             "-v",
@@ -1029,8 +1032,10 @@ pub fn initKeystore(sdk: Sdk, key_store: KeyStore, key_config: KeyConfig) *Step 
             key_store.password,
             "-dname",
             key_config.distinguished_name,
-        });
-        return &step.step;
+        };
+
+        const run = sdk.b.addSystemCommand(args);
+        return &run.step;
     }
 }
 
@@ -1152,22 +1157,6 @@ const BuildOptionStep = struct {
                 }
                 return;
             },
-            // std.builtin.Version => {
-            //     out.print(
-            //         \\pub const {}: @import("std").builtin.Version = .{{
-            //         \\    .major = {d},
-            //         \\    .minor = {d},
-            //         \\    .patch = {d},
-            //         \\}};
-            //         \\
-            //     , .{
-            //         std.zig.fmtId(name),
-
-            //         value.major,
-            //         value.minor,
-            //         value.patch,
-            //     }) catch unreachable;
-            // },
             std.SemanticVersion => {
                 out.print(
                     \\pub const {}: @import("std").SemanticVersion = .{{

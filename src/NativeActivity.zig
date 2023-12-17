@@ -17,13 +17,13 @@ pub fn init(activity: *android.ANativeActivity) Self {
 /// Get the JNIEnv associated with the current thread.
 pub fn get(activity: *android.ANativeActivity) Self {
     var env: *android.JNIEnv = undefined;
-    _ = activity.vm.*.GetEnv(activity.vm, @ptrCast(*?*anyopaque, &env), android.JNI_VERSION_1_6);
+    _ = activity.vm.*.GetEnv(activity.vm, @as(*?*anyopaque, @ptrCast(&env)), android.JNI_VERSION_1_6);
     return fromJniEnv(activity, env);
 }
 
 fn fromJniEnv(activity: *android.ANativeActivity, env: *android.JNIEnv) Self {
-    var jni = @ptrCast(*android.JNI, env);
-    var activityClass = jni.findClass("android/app/NativeActivity") catch @panic("Could not get NativeActivity class");
+    var jni = @as(*android.JNI, @ptrCast(env));
+    const activityClass = jni.findClass("android/app/NativeActivity") catch @panic("Could not get NativeActivity class");
 
     return Self{
         .activity = activity,
@@ -46,7 +46,7 @@ pub fn AndroidGetUnicodeChar(self: *Self, keyCode: c_int, metaState: c_int) !u21
     const event_obj = try KeyEvent.newObject("(II)V", .{ eventType, keyCode });
     const unicode_key = try KeyEvent.callIntMethod(event_obj, "getUnicodeChar", "(I)I", .{metaState});
 
-    return @intCast(u21, unicode_key);
+    return @as(u21, @intCast(unicode_key));
 }
 
 pub fn AndroidMakeFullscreen(self: *Self) !void {
@@ -97,7 +97,7 @@ pub fn AndroidMakeFullscreen(self: *Self) !void {
 pub fn AndroidDisplayKeyboard(self: *Self, show: bool) !bool {
     // Based on
     // https://stackoverflow.com/questions/5864790/how-to-show-the-soft-keyboard-on-native-activity
-    var lFlags: android.jint = 0;
+    const lFlags: android.jint = 0;
 
     // Retrieves Context.INPUT_METHOD_SERVICE.
     const ClassContext = try self.jni.findClass("android/content/Context");

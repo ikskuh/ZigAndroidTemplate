@@ -24,14 +24,12 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
     // Check for a user config file.
     if (std.fs.cwd().openFile(config_path, .{})) |file| {
         defer file.close();
-        // @panic("Config file not supported yet");
-        std.debug.print("Config file: TODO\n", .{});
-        const bytes = file.readToEndAlloc(b.allocator, 1 * 1000 * 1000) catch |err| {
+        const bytes = file.readToEndAlloc(b.allocator, 2 * 1024 * 1024) catch |err| {
             print("Unexpected error reading {s}: {s}\n", .{ config_path, @errorName(err) });
             return err;
         };
-        if (std.json.parseFromSlice(UserConfig, b.allocator, bytes, .{})) |conf| {
-            config = conf.value;
+        if (std.json.parseFromSliceLeaky(UserConfig, b.allocator, bytes, .{})) |conf| {
+            config = conf;
         } else |err| {
             print("Could not parse {s} ({s}).\n", .{ config_path, @errorName(err) });
             return err;
@@ -157,7 +155,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         };
 
         // Get the android studio registry entry
-        var android_studio_key: HKEY = for ([_]HKEY{ HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE }) |root_key| {
+        const android_studio_key: HKEY = for ([_]HKEY{ HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE }) |root_key| {
             var software: HKEY = null;
             if (reg.RegOpenKeyA(root_key, "software", &software) == ERROR_SUCCESS) {
                 defer _ = reg.RegCloseKey(software);

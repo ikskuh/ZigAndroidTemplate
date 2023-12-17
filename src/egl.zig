@@ -20,7 +20,7 @@ pub const EGLContext = struct {
     pub fn init(window: *android.ANativeWindow, version: Version) !Self {
         const EGLint = c.EGLint;
 
-        var egl_display = c.eglGetDisplay(null);
+        const egl_display = c.eglGetDisplay(null);
         if (egl_display == null) {
             log.err("Error: No display found!\n", .{});
             return error.FailedToInitializeEGL;
@@ -87,7 +87,7 @@ pub const EGLContext = struct {
 
         log.info("Context created: {?}\n", .{context});
 
-        var native_window: c.EGLNativeWindowType = @ptrCast(c.EGLNativeWindowType, window); // this is safe, just a C import problem
+        const native_window: c.EGLNativeWindowType = @ptrCast(window); // this is safe, just a C import problem
 
         const android_width = android.ANativeWindow_getWidth(window);
         const android_height = android.ANativeWindow_getHeight(window);
