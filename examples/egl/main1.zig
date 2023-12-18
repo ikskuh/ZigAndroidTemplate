@@ -2,7 +2,7 @@ const std = @import("std");
 
 const android = @import("android");
 
-const audio = android.audio;
+// const audio = android.audio;
 pub const panic = android.panic;
 
 const EGLContext = android.egl.EGLContext;
@@ -49,8 +49,8 @@ pub const AndroidApp = struct {
     screen_width: f32 = undefined,
     screen_height: f32 = undefined,
 
-    // audio_engine: audio.AudioEngine = .{},
-    simple_synth: SimpleSynth = undefined,
+    // // audio_engine: audio.AudioEngine = .{},
+    // simple_synth: SimpleSynth = undefined,
 
     /// This is the entry point which initializes a application
     /// that has stored its previous state.
@@ -222,9 +222,9 @@ pub const AndroidApp = struct {
         std.debug.assert(point.index != null);
         var oldest: *TouchPoint = undefined;
 
-        if (point.index) |index| {
-            self.simple_synth.oscillators[@as(usize, @intCast(index))].setWaveOn(true);
-        }
+        // if (point.index) |index| {
+        //     self.simple_synth.oscillators[@as(usize, @intCast(index))].setWaveOn(true);
+        // }
 
         for (&self.touch_points, 0..) |*opt, i| {
             if (opt.*) |*pt| {
@@ -369,22 +369,22 @@ pub const AndroidApp = struct {
             printConfig(cfg);
         }
 
-        // Audio
-        self.simple_synth = SimpleSynth.init();
+        // // Audio
+        // self.simple_synth = SimpleSynth.init();
 
-        try audio.init();
+        // try audio.init();
 
-        var output_stream = try audio.getOutputStream(self.allocator, .{
-            .sample_format = .Int16,
-            .callback = SimpleSynth.audioCallback,
-            .user_data = &self.simple_synth,
-        });
-        defer {
-            output_stream.stop();
-            output_stream.deinit();
-        }
+        // var output_stream = try audio.getOutputStream(self.allocator, .{
+        //     .sample_format = .Int16,
+        //     .callback = SimpleSynth.audioCallback,
+        //     .user_data = &self.simple_synth,
+        // });
+        // defer {
+        //     output_stream.stop();
+        //     output_stream.deinit();
+        // }
 
-        try output_stream.start();
+        // try output_stream.start();
 
         // Graphics
         const GLuint = c.GLuint;
@@ -640,9 +640,9 @@ pub const AndroidApp = struct {
 
                             point.intensity -= 0.05;
                             if (point.intensity <= 0.0) {
-                                if (point.index) |index| {
-                                    self.simple_synth.oscillators[@as(usize, @intCast(index))].setWaveOn(false);
-                                }
+                                // if (point.index) |index| {
+                                //     self.simple_synth.oscillators[@as(usize, @intCast(index))].setWaveOn(false);
+                                // }
                                 pt.* = null;
                             }
                         }
@@ -878,27 +878,27 @@ const Oscillator = struct {
     }
 };
 
-const SimpleSynth = struct {
-    oscillators: [10]Oscillator = [1]Oscillator{.{}} ** 10,
+// const SimpleSynth = struct {
+//     oscillators: [10]Oscillator = [1]Oscillator{.{}} ** 10,
 
-    fn init() SimpleSynth {
-        var synth = SimpleSynth{};
-        for (&synth.oscillators, 0..) |*osc, index| {
-            osc.* = Oscillator{
-                .frequency = audio.midiToFreq(49 + index * 3),
-                .amplitude = audio.dBToAmplitude(-@as(f64, @floatFromInt(index)) - 15),
-            };
-        }
-        return synth;
-    }
+//     fn init() SimpleSynth {
+//         var synth = SimpleSynth{};
+//         for (&synth.oscillators, 0..) |*osc, index| {
+//             osc.* = Oscillator{
+//                 .frequency = audio.midiToFreq(49 + index * 3),
+//                 .amplitude = audio.dBToAmplitude(-@as(f64, @floatFromInt(index)) - 15),
+//             };
+//         }
+//         return synth;
+//     }
 
-    fn audioCallback(stream: audio.StreamLayout, user_data: *anyopaque) void {
-        var synth = @as(*SimpleSynth, @ptrCast(@alignCast(user_data)));
-        std.debug.assert(stream.buffer == .Int16);
+//     fn audioCallback(stream: audio.StreamLayout, user_data: *anyopaque) void {
+//         var synth = @as(*SimpleSynth, @ptrCast(@alignCast(user_data)));
+//         std.debug.assert(stream.buffer == .Int16);
 
-        for (&synth.oscillators) |*osc| {
-            osc.setSampleRate(@as(i32, @intCast(stream.sample_rate)));
-            osc.renderi16(stream.buffer.Int16);
-        }
-    }
-};
+//         for (&synth.oscillators) |*osc| {
+//             osc.setSampleRate(@as(i32, @intCast(stream.sample_rate)));
+//             osc.renderi16(stream.buffer.Int16);
+//         }
+//     }
+// };

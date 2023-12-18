@@ -9,8 +9,6 @@ pub usingnamespace @cImport({
     if (build_options.enable_aaudio) {
         @cInclude("aaudio/AAudio.h");
     }
-    if (build_options.enable_opensl) {
-        @cInclude("SLES/OpenSLES.h");
-        @cInclude("SLES/OpenSLES_Android.h");
-    }
 });
+
+pub usingnamespace if (build_options.enable_opensl) @import("OpenSLES.zig");
