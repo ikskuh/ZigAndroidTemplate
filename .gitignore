@@ -5,3 +5,4 @@ zig-cache
 .build_config
 zig-out
 *.apk.idsig
+.zig-cache

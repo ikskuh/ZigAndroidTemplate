@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const Builder = std.build.Builder;
+const Build = std.Build;
 
 const Sdk = @import("../Sdk.zig");
 const UserConfig = Sdk.UserConfig;
@@ -11,7 +11,7 @@ const local_config_file = "android.json";
 
 const print = std.debug.print;
 
-pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig {
+pub fn findUserConfig(b: *Build, versions: Sdk.ToolchainVersions) !UserConfig {
     // var str_buf: [5]u8 = undefined;
 
     var config = UserConfig{};
@@ -367,7 +367,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
             print("\n", .{});
         }
 
-        std.os.exit(1);
+        std.process.exit(1);
     }
 
     if (config_dirty) {
@@ -383,7 +383,7 @@ pub fn findProgramPath(allocator: std.mem.Allocator, program: []const u8) ?[]con
     else
         &[_][]const u8{ "which", program };
 
-    var proc = std.ChildProcess.init(args, allocator);
+    var proc = std.process.Child.init(args, allocator);
 
     proc.stderr_behavior = .Close;
     proc.stdout_behavior = .Pipe;
@@ -411,7 +411,7 @@ pub fn findProgramPath(allocator: std.mem.Allocator, program: []const u8) ?[]con
 
 // Returns the problem with an android_home path.
 // If it seems alright, returns null.
-fn findProblemWithAndroidSdk(b: *Builder, versions: Sdk.ToolchainVersions, path: []const u8) ?[]const u8 {
+fn findProblemWithAndroidSdk(b: *Build, versions: Sdk.ToolchainVersions, path: []const u8) ?[]const u8 {
     std.fs.cwd().access(path, .{}) catch |err| {
         if (err == error.FileNotFound) return "Directory does not exist";
         return b.fmt("Cannot access {s}, {s}", .{ path, @errorName(err) });
@@ -449,7 +449,7 @@ fn findProblemWithAndroidSdk(b: *Builder, versions: Sdk.ToolchainVersions, path:
 
 // Returns the problem with an android ndk path.
 // If it seems alright, returns null.
-fn findProblemWithAndroidNdk(b: *Builder, versions: Sdk.ToolchainVersions, path: []const u8) ?[]const u8 {
+fn findProblemWithAndroidNdk(b: *Build, versions: Sdk.ToolchainVersions, path: []const u8) ?[]const u8 {
     std.fs.cwd().access(path, .{}) catch |err| {
         if (err == error.FileNotFound) return "Directory does not exist";
         return b.fmt("Cannot access {s}, {s}", .{ path, @errorName(err) });
@@ -474,7 +474,7 @@ fn findProblemWithAndroidNdk(b: *Builder, versions: Sdk.ToolchainVersions, path:
 
 // Returns the problem with a jdk install.
 // If it seems alright, returns null.
-fn findProblemWithJdk(b: *Builder, path: []const u8) ?[]const u8 {
+fn findProblemWithJdk(b: *Build, path: []const u8) ?[]const u8 {
     std.fs.cwd().access(path, .{}) catch |err| {
         if (err == error.FileNotFound) return "Directory does not exist";
         return b.fmt("Cannot access {s}, {s}", .{ path, @errorName(err) });
@@ -489,7 +489,7 @@ fn findProblemWithJdk(b: *Builder, path: []const u8) ?[]const u8 {
     return null;
 }
 
-fn pathConcat(b: *Builder, left: []const u8, right: []const u8) []const u8 {
+fn pathConcat(b: *Build, left: []const u8, right: []const u8) []const u8 {
     return std.fs.path.join(b.allocator, &[_][]const u8{ left, right }) catch unreachable;
 }
 
