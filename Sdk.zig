@@ -895,7 +895,7 @@ pub fn compileAppLibrary(
 
     // exe.addIncludePath(include_dir);
 
-    exe.addLibraryPath(sdk.b.path(lib_dir));
+    exe.addLibraryPath(.{ .cwd_relative = lib_dir });
 
     // exe.addIncludePath(include_dir);
     // exe.addIncludePath(system_include_dir);

@@ -74,7 +74,7 @@ pub const AndroidApp = struct {
     /// Uninitialize the application.
     /// Don't forget to stop your background thread here!
     pub fn deinit(self: *Self) void {
-        @atomicStore(bool, &self.running, false, .SeqCst);
+        @atomicStore(bool, &self.running, false, .seq_cst);
         if (self.thread) |thread| {
             thread.join();
             self.thread = null;
@@ -413,7 +413,7 @@ pub const AndroidApp = struct {
             1.0, 1.0,
         };
 
-        while (@atomicLoad(bool, &self.running, .SeqCst)) {
+        while (@atomicLoad(bool, &self.running, .seq_cst)) {
 
             // Input process
             {
@@ -846,7 +846,7 @@ const Oscillator = struct {
     amplitude: f64 = 0.1,
 
     fn setWaveOn(self: *@This(), isWaveOn: bool) void {
-        @atomicStore(bool, &self.isWaveOn, isWaveOn, .SeqCst);
+        @atomicStore(bool, &self.isWaveOn, isWaveOn, .seq_cst);
     }
 
     fn setSampleRate(self: *@This(), sample_rate: i32) void {
@@ -854,10 +854,10 @@ const Oscillator = struct {
     }
 
     fn renderf32(self: *@This(), audio_data: []f32) void {
-        if (!@atomicLoad(bool, &self.isWaveOn, .SeqCst)) self.phase = 0;
+        if (!@atomicLoad(bool, &self.isWaveOn, .seq_cst)) self.phase = 0;
 
         for (audio_data) |*frame| {
-            if (@atomicLoad(bool, &self.isWaveOn, .SeqCst)) {
+            if (@atomicLoad(bool, &self.isWaveOn, .seq_cst)) {
                 frame.* += @as(f32, @floatCast(std.math.sin(self.phase) * self.amplitude));
                 self.phase += self.phaseIncrement;
                 if (self.phase > std.math.tau) self.phase -= std.math.tau;
@@ -866,10 +866,10 @@ const Oscillator = struct {
     }
 
     fn renderi16(self: *@This(), audio_data: []i16) void {
-        if (!@atomicLoad(bool, &self.isWaveOn, .SeqCst)) self.phase = 0;
+        if (!@atomicLoad(bool, &self.isWaveOn, .seq_cst)) self.phase = 0;
 
         for (audio_data) |*frame| {
-            if (@atomicLoad(bool, &self.isWaveOn, .SeqCst)) {
+            if (@atomicLoad(bool, &self.isWaveOn, .seq_cst)) {
                 frame.* +|= @as(i16, @intFromFloat(@as(f32, @floatCast(std.math.sin(self.phase) * self.amplitude)) * std.math.maxInt(i16)));
                 self.phase += self.phaseIncrement;
                 if (self.phase > std.math.tau) self.phase -= std.math.tau;

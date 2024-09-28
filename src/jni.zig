@@ -10,8 +10,8 @@ const android = @import("android-support.zig");
 pub const JNI = opaque {
     // Underlying implementation
     fn JniReturnType(comptime function: @TypeOf(.literal)) type {
-        @setEvalBranchQuota(10_000);
-        return @typeInfo(@typeInfo(std.meta.fieldInfo(android.JNINativeInterface, function).type).Pointer.child).Fn.return_type.?;
+        @setEvalBranchQuota(100_000);
+        return @typeInfo(@typeInfo(std.meta.fieldInfo(android.JNINativeInterface, function).type).pointer.child).@"fn".return_type.?;
     }
 
     pub inline fn invokeJniNoException(jni: *JNI, comptime function: @TypeOf(.literal), args: anytype) JniReturnType(function) {

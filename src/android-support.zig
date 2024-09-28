@@ -101,14 +101,14 @@ var recursive_panic = false;
 pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     var logger = LogWriter{ .log_level = android.ANDROID_LOG_ERROR };
 
-    if (@atomicLoad(bool, &recursive_panic, .SeqCst)) {
+    if (@atomicLoad(bool, &recursive_panic, .seq_cst)) {
         logger.writer().print("RECURSIVE PANIC: {s}\n", .{message}) catch {};
         while (true) {
             std.time.sleep(std.time.ns_per_week);
         }
     }
 
-    @atomicStore(bool, &recursive_panic, true, .SeqCst);
+    @atomicStore(bool, &recursive_panic, true, .seq_cst);
 
     logger.writer().print("PANIC: {s}\n", .{message}) catch {};
 
@@ -140,7 +140,7 @@ pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace, _: ?usi
 
     logger.writer().writeAll("<-- end of stack trace -->\n") catch {};
 
-    std.os.exit(1);
+    std.process.exit(1);
 }
 
 const LogWriter = struct {
@@ -231,9 +231,9 @@ fn makeNativeActivityGlue(comptime App: type) android.ANativeActivityCallbacks {
                 if (activity.instance) |instance| {
                     const result = @call(.auto, @field(App, func), .{@as(*App, @ptrCast(@alignCast(instance)))} ++ args);
                     switch (@typeInfo(@TypeOf(result))) {
-                        .ErrorUnion => result catch |err| app_log.err("{s} returned error {s}", .{ func, @errorName(err) }),
-                        .Void => {},
-                        .ErrorSet => app_log.err("{s} returned error {s}", .{ func, @errorName(result) }),
+                        .error_union => result catch |err| app_log.err("{s} returned error {s}", .{ func, @errorName(err) }),
+                        .void => {},
+                        .error_set => app_log.err("{s} returned error {s}", .{ func, @errorName(result) }),
                         else => @compileError("callback must return void!"),
                     }
                 }
@@ -329,7 +329,7 @@ fn makeNativeActivityGlue(comptime App: type) android.ANativeActivityCallbacks {
     };
 }
 
-inline fn printSymbolInfoAt(st_index: usize, maybe_debug_info: ?*std.debug.DebugInfo, int_addr: usize) void {
+inline fn printSymbolInfoAt(st_index: usize, maybe_debug_info: ?*std.debug.SelfInfo, int_addr: usize) void {
     var symbol_name_buffer: [1024]u8 = undefined;
     var symbol_name: ?[]const u8 = null;
 
@@ -346,9 +346,9 @@ inline fn printSymbolInfoAt(st_index: usize, maybe_debug_info: ?*std.debug.Debug
                     &symbol_name_buffer,
                     "{s} {s} {s}",
                     .{
-                        symbol.symbol_name,
+                        symbol.name,
                         symbol.compile_unit_name,
-                        fmtMaybeLineInfo(symbol.line_info),
+                        fmtMaybeLineInfo(symbol.source_location),
                     },
                 ) catch symbol_name;
             } else |_| {}
@@ -362,7 +362,7 @@ inline fn printSymbolInfoAt(st_index: usize, maybe_debug_info: ?*std.debug.Debug
     });
 }
 
-fn realFmtMaybeLineInfo(self: ?std.debug.LineInfo, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+fn realFmtMaybeLineInfo(self: ?std.debug.SourceLocation, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
     _ = fmt;
     _ = options;
     if (self) |li| {
@@ -376,7 +376,7 @@ fn realFmtMaybeLineInfo(self: ?std.debug.LineInfo, comptime fmt: []const u8, opt
     }
 }
 
-fn fmtMaybeLineInfo(li: ?std.debug.LineInfo) std.fmt.Formatter(realFmtMaybeLineInfo) {
+fn fmtMaybeLineInfo(li: ?std.debug.SourceLocation) std.fmt.Formatter(realFmtMaybeLineInfo) {
     return std.fmt.Formatter(realFmtMaybeLineInfo){
         .data = li,
     };
