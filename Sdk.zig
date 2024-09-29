@@ -7,15 +7,6 @@ const builtin = @import("builtin");
 
 const auto_detect = @import("build/auto-detect.zig");
 
-fn sdkRootIntern() []const u8 {
-    return std.fs.path.dirname(@src().file) orelse ".";
-}
-
-fn sdkRoot() *const [sdkRootIntern().len]u8 {
-    comptime var buffer = sdkRootIntern();
-    return buffer[0..buffer.len];
-}
-
 // linux-x86_64
 pub fn toolchainHostTag() []const u8 {
     const os = builtin.os.tag;
@@ -88,16 +79,16 @@ pub fn init(b: *Build, user_config: ?UserConfig, toolchains: ToolchainVersions) 
     const host_tools = blk: {
         const zip_add = b.addExecutable(.{
             .name = "zip_add",
-            .root_source_file = b.path(sdkRoot() ++ "/tools/zip_add.zig"),
+            .root_source_file = b.path("tools/zip_add.zig"),
             .target = b.resolveTargetQuery(.{}),
             .optimize = .Debug,
         });
-        zip_add.addCSourceFile(.{ .file = b.path(sdkRoot() ++ "/vendor/kuba-zip/zip.c"), .flags = &[_][]const u8{
+        zip_add.addCSourceFile(.{ .file = b.path("vendor/kuba-zip/zip.c"), .flags = &[_][]const u8{
             "-std=c99",
             "-fno-sanitize=undefined",
             "-D_POSIX_C_SOURCE=200112L",
         } });
-        zip_add.addIncludePath(b.path(sdkRoot() ++ "/vendor/kuba-zip"));
+        zip_add.addIncludePath(b.path("vendor/kuba-zip"));
         zip_add.linkLibC();
 
         break :blk HostTools{
@@ -272,7 +263,7 @@ pub const CreateAppStep = struct {
     pub fn getAndroidPackage(self: @This(), name: []const u8) std.build.Pkg {
         return self.sdk.b.dupePkg(std.build.Pkg{
             .name = name,
-            .source = self.sdk.b.path(sdkRoot() ++ "/src/android-support.zig"),
+            .source = self.sdk.b.path("src/android-support.zig"),
             .dependencies = &[_]std.build.Pkg{
                 self.build_options.getPackage("build_options"),
             },
