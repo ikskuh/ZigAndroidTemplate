@@ -22,14 +22,14 @@ pub fn init(jni: *android.JNI, class: android.jobject) !Self {
 
 pub fn createAlloc(self: Self, jni: *android.JNI, alloc: std.mem.Allocator, pointer: ?*anyopaque, function: InvokeFn) !android.jobject {
     // Create a InvocationHandler struct
-    var handler = try alloc.create(InvocationHandler);
+    const handler = try alloc.create(InvocationHandler);
     errdefer alloc.destroy(handler);
     handler.* = .{
         .pointer = pointer,
         .function = function,
     };
 
-    const handler_value = @ptrToInt(handler);
+    const handler_value = @intFromPtr(handler);
     std.debug.assert(handler_value <= 0x7fffffffffffffff);
 
     // Call handler constructor
@@ -59,7 +59,7 @@ const InvocationHandler = struct {
         const Class = try jni.invokeJni(.GetObjectClass, .{this});
         const ptrField = try jni.invokeJni(.GetFieldID, .{ Class, "ptr", "J" });
         const jptr = try jni.getLongField(this, ptrField);
-        const h = @intToPtr(*InvocationHandler, @intCast(usize, jptr));
+        const h = @as(*InvocationHandler, @ptrFromInt(jptr));
         return h.function(h.pointer, jni, method, args);
     }
 };

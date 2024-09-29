@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const Builder = std.build.Builder;
+const Build = std.Build;
 
 const Sdk = @import("../Sdk.zig");
 const UserConfig = Sdk.UserConfig;
@@ -11,7 +11,7 @@ const local_config_file = "android.json";
 
 const print = std.debug.print;
 
-pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig {
+pub fn findUserConfig(b: *Build, versions: Sdk.ToolchainVersions) !UserConfig {
     // var str_buf: [5]u8 = undefined;
 
     var config = UserConfig{};
@@ -24,12 +24,11 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
     // Check for a user config file.
     if (std.fs.cwd().openFile(config_path, .{})) |file| {
         defer file.close();
-        const bytes = file.readToEndAlloc(b.allocator, 1 * 1000 * 1000) catch |err| {
+        const bytes = file.readToEndAlloc(b.allocator, 2 * 1024 * 1024) catch |err| {
             print("Unexpected error reading {s}: {s}\n", .{ config_path, @errorName(err) });
             return err;
         };
-        var stream = std.json.TokenStream.init(bytes);
-        if (std.json.parse(UserConfig, &stream, .{ .allocator = b.allocator })) |conf| {
+        if (std.json.parseFromSliceLeaky(UserConfig, b.allocator, bytes, .{})) |conf| {
             config = conf;
         } else |err| {
             print("Could not parse {s} ({s}).\n", .{ config_path, @errorName(err) });
@@ -99,10 +98,10 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         const LSTATUS = u32;
         const DWORD = u32;
 
-        // const HKEY_CLASSES_ROOT = @intToPtr(HKEY, 0x80000000);
-        const HKEY_CURRENT_USER = @intToPtr(HKEY, 0x80000001);
-        const HKEY_LOCAL_MACHINE = @intToPtr(HKEY, 0x80000002);
-        // const HKEY_USERS = @intToPtr(HKEY, 0x80000003);
+        // const HKEY_CLASSES_ROOT: HKEY= @ptrFromInt(0x80000000);
+        const HKEY_CURRENT_USER: HKEY = @ptrFromInt(0x80000001);
+        const HKEY_LOCAL_MACHINE: HKEY = @ptrFromInt(0x80000002);
+        // const HKEY_USERS: HKEY= @ptrFromInt(0x80000003);
 
         // const RRF_RT_ANY: DWORD = 0xFFFF;
         // const RRF_RT_REG_BINARY: DWORD = 0x08;
@@ -142,7 +141,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
 
                 // get the data
                 const buffer = allocator.alloc(u8, len) catch unreachable;
-                len = @intCast(DWORD, buffer.len);
+                len = @as(DWORD, @intCast(buffer.len));
                 res = RegGetValueA(key, null, value, RRF_RT_REG_SZ, null, buffer.ptr, &len);
                 if (res == ERROR_SUCCESS) {
                     for (buffer[0..len], 0..) |c, i| {
@@ -156,7 +155,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
         };
 
         // Get the android studio registry entry
-        var android_studio_key: HKEY = for ([_]HKEY{ HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE }) |root_key| {
+        const android_studio_key: HKEY = for ([_]HKEY{ HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE }) |root_key| {
             var software: HKEY = null;
             if (reg.RegOpenKeyA(root_key, "software", &software) == ERROR_SUCCESS) {
                 defer _ = reg.RegCloseKey(software);
@@ -368,7 +367,7 @@ pub fn findUserConfig(b: *Builder, versions: Sdk.ToolchainVersions) !UserConfig 
             print("\n", .{});
         }
 
-        std.os.exit(1);
+        std.process.exit(1);
     }
 
     if (config_dirty) {
@@ -384,7 +383,7 @@ pub fn findProgramPath(allocator: std.mem.Allocator, program: []const u8) ?[]con
     else
         &[_][]const u8{ "which", program };
 
-    var proc = std.ChildProcess.init(args, allocator);
+    var proc = std.process.Child.init(args, allocator);
 
     proc.stderr_behavior = .Close;
     proc.stdout_behavior = .Pipe;
@@ -412,7 +411,7 @@ pub fn findProgramPath(allocator: std.mem.Allocator, program: []const u8) ?[]con
 
 // Returns the problem with an android_home path.
 // If it seems alright, returns null.
-fn findProblemWithAndroidSdk(b: *Builder, versions: Sdk.ToolchainVersions, path: []const u8) ?[]const u8 {
+fn findProblemWithAndroidSdk(b: *Build, versions: Sdk.ToolchainVersions, path: []const u8) ?[]const u8 {
     std.fs.cwd().access(path, .{}) catch |err| {
         if (err == error.FileNotFound) return "Directory does not exist";
         return b.fmt("Cannot access {s}, {s}", .{ path, @errorName(err) });
@@ -450,7 +449,7 @@ fn findProblemWithAndroidSdk(b: *Builder, versions: Sdk.ToolchainVersions, path:
 
 // Returns the problem with an android ndk path.
 // If it seems alright, returns null.
-fn findProblemWithAndroidNdk(b: *Builder, versions: Sdk.ToolchainVersions, path: []const u8) ?[]const u8 {
+fn findProblemWithAndroidNdk(b: *Build, versions: Sdk.ToolchainVersions, path: []const u8) ?[]const u8 {
     std.fs.cwd().access(path, .{}) catch |err| {
         if (err == error.FileNotFound) return "Directory does not exist";
         return b.fmt("Cannot access {s}, {s}", .{ path, @errorName(err) });
@@ -475,7 +474,7 @@ fn findProblemWithAndroidNdk(b: *Builder, versions: Sdk.ToolchainVersions, path:
 
 // Returns the problem with a jdk install.
 // If it seems alright, returns null.
-fn findProblemWithJdk(b: *Builder, path: []const u8) ?[]const u8 {
+fn findProblemWithJdk(b: *Build, path: []const u8) ?[]const u8 {
     std.fs.cwd().access(path, .{}) catch |err| {
         if (err == error.FileNotFound) return "Directory does not exist";
         return b.fmt("Cannot access {s}, {s}", .{ path, @errorName(err) });
@@ -490,7 +489,7 @@ fn findProblemWithJdk(b: *Builder, path: []const u8) ?[]const u8 {
     return null;
 }
 
-fn pathConcat(b: *Builder, left: []const u8, right: []const u8) []const u8 {
+fn pathConcat(b: *Build, left: []const u8, right: []const u8) []const u8 {
     return std.fs.path.join(b.allocator, &[_][]const u8{ left, right }) catch unreachable;
 }
 
